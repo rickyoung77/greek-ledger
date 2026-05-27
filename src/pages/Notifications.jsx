@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
@@ -28,6 +28,18 @@ export default function Notifications() {
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState(null)
 
+  const activeRef = useRef(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (activeRef.current) {
+        setLoading(false)
+        setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
+      }
+    }, 8000)
+    return () => { activeRef.current = false; clearTimeout(timer) }
+  }, [])
+
   useEffect(() => {
     if (chapterId) load()
     else if (!authLoading) setLoading(false)
@@ -36,14 +48,9 @@ export default function Notifications() {
   async function load() {
     setLoading(true)
     setError(null)
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timed out. Please refresh.')), 5000)
-    )
     try {
-      const { data, error: err } = await Promise.race([
-        supabase.from('notifications').select('*').eq('chapter_id', chapterId).order('created_at', { ascending: false }),
-        timeout,
-      ])
+      const { data, error: err } = await supabase
+        .from('notifications').select('*').eq('chapter_id', chapterId).order('created_at', { ascending: false })
       if (err) throw err
       setNotifications(data ?? [])
     } catch (err) {

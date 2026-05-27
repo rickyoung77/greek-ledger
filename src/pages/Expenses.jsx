@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
@@ -13,22 +13,40 @@ const fmtDate = (s) => new Date(s + 'T00:00:00').toLocaleDateString('en-US', { m
 
 const CATEGORY_OPTIONS = ['All Categories', 'Social', 'Operations', 'Philanthropy', 'Housing']
 const STATUS_OPTIONS   = ['All Statuses', 'Approved', 'Pending', 'Rejected']
+const BLANK_FORM = { amount: '', budget_account_id: '', category: '', description: '', date: '', submitted_by: '' }
 
 export default function Expenses() {
   const { chapterId, fullName, loading: authLoading } = useAuth()
 
   const [expenses, setExpenses]   = useState([])
+  const [accounts, setAccounts]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
   const [savingId, setSavingId]   = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
 
   const [category, setCategory]   = useState('All Categories')
   const [status, setStatus]       = useState('All Statuses')
   const [member, setMember]       = useState('All Members')
   const [dateFrom, setDateFrom]   = useState('')
   const [dateTo, setDateTo]       = useState('')
+
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm]           = useState({ amount: '', category: 'Social', description: '', date: '' })
+  const [form, setForm]           = useState(BLANK_FORM)
+  const [modalSaving, setModalSaving] = useState(false)
+  const [modalError, setModalError]   = useState(null)
+
+  const activeRef = useRef(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (activeRef.current) {
+        setLoading(false)
+        setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
+      }
+    }, 8000)
+    return () => { activeRef.current = false; clearTimeout(timer) }
+  }, [])
 
   useEffect(() => {
     if (chapterId) load()
@@ -38,16 +56,15 @@ export default function Expenses() {
   async function load() {
     setLoading(true)
     setError(null)
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timed out. Please refresh.')), 5000)
-    )
     try {
-      const { data, error: err } = await Promise.race([
+      const [expResult, acctResult] = await Promise.all([
         supabase.from('expenses').select('*').eq('chapter_id', chapterId).order('date', { ascending: false }),
-        timeout,
+        supabase.from('budget_accounts').select('id, name, color').eq('chapter_id', chapterId).order('name'),
       ])
-      if (err) throw err
-      setExpenses(data ?? [])
+      if (expResult.error) throw expResult.error
+      if (acctResult.error) throw acctResult.error
+      setExpenses(expResult.data ?? [])
+      setAccounts(acctResult.data ?? [])
     } catch (err) {
       setError(err?.message ?? 'Failed to load expenses.')
     } finally {
@@ -62,21 +79,46 @@ export default function Expenses() {
     setSavingId(null)
   }
 
-  async function handleSubmit() {
-    const { data, error: err } = await supabase.from('expenses').insert({
-      chapter_id:   chapterId,
-      description:  form.description,
-      amount:       parseFloat(form.amount) || 0,
-      category:     form.category,
-      submitted_by: fullName || 'Unknown',
-      status:       'Pending',
-      date:         form.date || new Date().toISOString().slice(0, 10),
-    }).select().single()
+  async function deleteExpense(id) {
+    if (!window.confirm('Delete this expense? This cannot be undone.')) return
+    setDeletingId(id)
+    const { error: err } = await supabase.from('expenses').delete().eq('id', id)
+    if (!err) setExpenses((prev) => prev.filter((e) => e.id !== id))
+    setDeletingId(null)
+  }
 
-    if (!err && data) {
+  function openModal() {
+    setForm({ ...BLANK_FORM, submitted_by: fullName || '' })
+    setModalError(null)
+    setShowModal(true)
+  }
+
+  async function handleSubmit() {
+    if (!form.amount || !form.description.trim()) {
+      setModalError('Amount and description are required.')
+      return
+    }
+    setModalSaving(true)
+    setModalError(null)
+    const selectedAccount = accounts.find((a) => a.id === form.budget_account_id)
+    try {
+      const { data, error: err } = await supabase.from('expenses').insert({
+        chapter_id:        chapterId,
+        description:       form.description.trim(),
+        amount:            parseFloat(form.amount) || 0,
+        category:          selectedAccount ? selectedAccount.name : (form.category || 'Uncategorized'),
+        budget_account_id: selectedAccount ? selectedAccount.id : null,
+        submitted_by:      form.submitted_by.trim() || fullName || 'Unknown',
+        status:            'Pending',
+        date:              form.date || new Date().toISOString().slice(0, 10),
+      }).select().single()
+      if (err) throw err
       setExpenses((prev) => [data, ...prev])
       setShowModal(false)
-      setForm({ amount: '', category: 'Social', description: '', date: '' })
+    } catch (err) {
+      setModalError(err?.message ?? 'Failed to submit expense.')
+    } finally {
+      setModalSaving(false)
     }
   }
 
@@ -141,7 +183,7 @@ export default function Expenses() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button onClick={() => { setCategory('All Categories'); setStatus('All Statuses'); setMember('All Members'); setDateFrom(''); setDateTo('') }} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition">Clear</button>
-          <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>+ Submit Expense</button>
+          <button onClick={openModal} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>+ Submit Expense</button>
         </div>
       </div>
 
@@ -173,16 +215,26 @@ export default function Expenses() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    {exp.status === 'Pending' && (
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => updateStatus(exp.id, 'Approved')} disabled={savingId === exp.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#dcfce7', color: '#15803d' }}>
-                          {savingId === exp.id ? '…' : 'Approve'}
-                        </button>
-                        <button onClick={() => updateStatus(exp.id, 'Rejected')} disabled={savingId === exp.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
-                          {savingId === exp.id ? '…' : 'Reject'}
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {exp.status === 'Pending' && (
+                        <>
+                          <button onClick={() => updateStatus(exp.id, 'Approved')} disabled={savingId === exp.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#dcfce7', color: '#15803d' }}>
+                            {savingId === exp.id ? '…' : 'Approve'}
+                          </button>
+                          <button onClick={() => updateStatus(exp.id, 'Rejected')} disabled={savingId === exp.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
+                            {savingId === exp.id ? '…' : 'Reject'}
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => deleteExpense(exp.id)}
+                        disabled={deletingId === exp.id}
+                        className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50"
+                        style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}
+                      >
+                        {deletingId === exp.id ? '…' : 'Delete'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -194,46 +246,95 @@ export default function Expenses() {
         </div>
       </div>
 
-      {/* Submit Modal */}
+      {/* Submit Expense Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Submit New Expense</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Submit Expense</h3>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                <input type="number" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              {modalError && (
+                <p className="text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>{modalError}</p>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount <span className="text-red-400">*</span></label>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  {['Social', 'Operations', 'Philanthropy', 'Housing'].map((c) => <option key={c}>{c}</option>)}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Budget Account</label>
+                <select
+                  value={form.budget_account_id}
+                  onChange={(e) => setForm({ ...form, budget_account_id: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">— Uncategorized —</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <input type="text" placeholder="Brief description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-400">*</span></label>
+                <input
+                  type="text"
+                  placeholder="Brief description"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Receipt</label>
-                <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition">
-                  <svg className="w-8 h-8 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  <p className="text-sm text-gray-400">Click to upload or drag and drop</p>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Submitted By</label>
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={form.submitted_by}
+                  onChange={(e) => setForm({ ...form, submitted_by: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition">Cancel</button>
-              <button onClick={handleSubmit} className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#1e2a4a', color: '#fff' }}>Submit Expense</button>
+              <button
+                onClick={handleSubmit}
+                disabled={modalSaving || !form.amount || !form.description.trim()}
+                className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                style={{ backgroundColor: '#1e2a4a', color: '#fff' }}
+              >
+                {modalSaving && (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                )}
+                {modalSaving ? 'Submitting…' : 'Submit Expense'}
+              </button>
             </div>
           </div>
         </div>
