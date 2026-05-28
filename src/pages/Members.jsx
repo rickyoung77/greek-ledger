@@ -5,7 +5,7 @@ import Spinner from '../components/Spinner'
 
 const AVATAR_COLORS = ['#3b82f6', '#8b5cf6', '#22c55e', '#f97316', '#ec4899', '#14b8a6', '#f59e0b', '#6366f1']
 const ROLES = ['President', 'VP Finance', 'Treasurer', 'Secretary', 'Social Chair', 'Member']
-const YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior']
+const YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior', '5th Year']
 
 const duesStyle = {
   Paid:    { bg: '#dcfce7', text: '#15803d' },
@@ -69,8 +69,9 @@ export default function Members() {
   const [form, setForm]             = useState(BLANK)
   const [saving, setSaving]         = useState(false)
   const [modalError, setModalError] = useState(null)
-  const [togglingId, setTogglingId] = useState(null)
-  const [removingId, setRemovingId] = useState(null)
+  const [togglingId, setTogglingId]     = useState(null)
+  const [removingId, setRemovingId]     = useState(null)
+  const [editingYearId, setEditingYearId] = useState(null)
 
   const activeRef = useRef(true)
 
@@ -141,6 +142,12 @@ export default function Members() {
     setTogglingId(null)
   }
 
+  async function updateYear(id, year) {
+    setEditingYearId(null)
+    const { error: err } = await supabase.from('members').update({ year }).eq('id', id)
+    if (!err) setMembers((prev) => prev.map((m) => m.id === id ? { ...m, year } : m))
+  }
+
   async function removeMember(id) {
     if (!window.confirm('Remove this member from the chapter?')) return
     setRemovingId(id)
@@ -195,7 +202,28 @@ export default function Members() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{m.role}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{m.year}</td>
+                    <td className="px-6 py-4 text-sm">
+                      {editingYearId === m.id ? (
+                        <select
+                          autoFocus
+                          defaultValue={m.year}
+                          onChange={(e) => updateYear(m.id, e.target.value)}
+                          onBlur={() => setEditingYearId(null)}
+                          className="border rounded px-2 py-1 text-sm focus:outline-none"
+                          style={{ borderColor: '#1e2a4a' }}
+                        >
+                          {YEARS.map((y) => <option key={y}>{y}</option>)}
+                        </select>
+                      ) : (
+                        <span
+                          onClick={() => setEditingYearId(m.id)}
+                          className="text-gray-600 cursor-pointer hover:text-blue-600 hover:underline transition"
+                          title="Click to edit year"
+                        >
+                          {m.year || '—'}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-500">{m.email ?? '—'}</td>
                     <td className="px-6 py-4">
                       <button

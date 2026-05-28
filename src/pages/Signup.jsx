@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-const ROLES     = ['Treasurer', 'President', 'Vice President', 'Officer', 'Member']
-const SEMESTERS = ['Spring 2025', 'Fall 2025', 'Spring 2026', 'Fall 2026', 'Spring 2027']
+const ROLES      = ['Treasurer', 'President', 'Vice President', 'Officer', 'Member']
+const SEMESTERS  = ['Spring 2025', 'Fall 2025', 'Spring 2026', 'Fall 2026', 'Spring 2027']
+const JOIN_YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior', '5th Year']
 
 const inputClass = 'w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition'
 const focusHandlers = {
@@ -40,7 +41,7 @@ export default function Signup() {
     semester: 'Fall 2026', role: 'Treasurer',
   })
   const [joinForm, setJoinForm] = useState({
-    fullName: '', email: '', password: '', joinCode: '',
+    fullName: '', email: '', password: '', joinCode: '', year: 'Freshman',
   })
   const [error, setError]         = useState(null)
   const [loading, setLoading]     = useState(false)
@@ -304,6 +305,12 @@ export default function Signup() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
                       <input type="password" required autoComplete="new-password" minLength={6} value={joinForm.password} onChange={setJ('password')} placeholder="Min. 6 characters" className={inputClass} {...focusHandlers} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Class Year</label>
+                      <select value={joinForm.year} onChange={setJ('year')} className={inputClass} style={{ backgroundColor: 'white' }}>
+                        {JOIN_YEARS.map((y) => <option key={y}>{y}</option>)}
+                      </select>
                     </div>
                   </div>
 

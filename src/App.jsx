@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -9,11 +10,20 @@ import Expenses from './pages/Expenses'
 import Members from './pages/Members'
 import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
+import Dues from './pages/Dues'
 
 function AppRoutes() {
   const { user, loading } = useAuth()
+  // Independent fallback: if loading hangs past 3s, show login regardless
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false)
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading) { setLoadingTimedOut(false); return }
+    const t = setTimeout(() => setLoadingTimedOut(true), 3000)
+    return () => clearTimeout(t)
+  }, [loading])
+
+  if (loading && !loadingTimedOut) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-5" style={{ backgroundColor: '#1e2a4a' }}>
         <div className="flex items-center gap-3">
@@ -51,6 +61,7 @@ function AppRoutes() {
         <Route path="/expenses"        element={<Expenses />} />
         <Route path="/members"         element={<Members />} />
         <Route path="/notifications"   element={<Notifications />} />
+        <Route path="/dues"             element={<Dues />} />
         <Route path="/settings"        element={<Settings />} />
         <Route path="/login"           element={<Navigate to="/" replace />} />
         <Route path="/signup"          element={<Navigate to="/" replace />} />

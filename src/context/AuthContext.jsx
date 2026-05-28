@@ -82,7 +82,7 @@ async function ensureChapterExists(user) {
             chapter_id:  rows[0].chapter_id,
             full_name:   meta.full_name || user.email,
             role:        'Member',
-            year:        'Freshman',
+            year:        meta.year || 'Freshman',
             dues_status: 'Pending',
             email:       user.email,
             user_id:     user.id,
@@ -146,34 +146,58 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
+    // Absolute ceiling: loading must resolve within 3 seconds no matter what
+    const hardTimeout = setTimeout(() => {
+      if (mounted) setLoading(false)
+    }, 3000)
+
+    const resolve = () => {
+      if (mounted) {
+        clearTimeout(hardTimeout)
+        setLoading(false)
+      }
+    }
+
     supabase.auth.getSession()
       .then(async ({ data }) => {
         if (!mounted) return
         const s = data?.session ?? null
         setSession(s)
         setUser(s?.user ?? null)
-        if (s?.user) await refreshProfile(s.user)
+        if (s?.user) {
+          // Race profile load against 2.5s so .finally() fires before the hard ceiling
+          await Promise.race([
+            refreshProfile(s.user),
+            new Promise((r) => setTimeout(r, 2500)),
+          ])
+        }
       })
       .catch(() => {})
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
+      .finally(resolve)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       if (!mounted) return
       setSession(s)
       setUser(s?.user ?? null)
+
       if (event === 'SIGNED_IN' && s?.user) {
         await ensureChapterExists(s.user)
         await refreshProfile(s.user)
-      }
-      if (event === 'SIGNED_OUT') {
+        resolve()
+      } else if (event === 'SIGNED_OUT') {
         setProfile(PROFILE_DEFAULTS)
+        resolve()
+      } else if (event === 'INITIAL_SESSION') {
+        // Fires synchronously on mount — resolves loading immediately for no-session case
+        if (!s?.user) resolve()
+      } else if (event === 'TOKEN_REFRESHED' && s?.user) {
+        refreshProfile(s.user)
       }
     })
 
     return () => {
       mounted = false
+      clearTimeout(hardTimeout)
       subscription.unsubscribe()
     }
   }, [refreshProfile])
@@ -200,7 +224,7 @@ export function AuthProvider({ children }) {
     return { error: null, needsEmailConfirmation: !data.session }
   }
 
-  async function joinChapter({ email, password, fullName, joinCode }) {
+  async function joinChapter({ email, password, fullName, joinCode, year }) {
     const { data: rows, error: lookupErr } = await supabase
       .rpc('lookup_join_code', { code: joinCode.toUpperCase().trim() })
 
@@ -216,6 +240,7 @@ export function AuthProvider({ children }) {
           flow: 'join',
           join_code: joinCode.toUpperCase().trim(),
           full_name: fullName,
+          year: year || 'Freshman',
         },
       },
     })
