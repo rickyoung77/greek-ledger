@@ -11,9 +11,10 @@ import Members from './pages/Members'
 import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
 import Dues from './pages/Dues'
+import CompleteSetup from './pages/CompleteSetup'
 
 function AppRoutes() {
-  const { user, loading } = useAuth()
+  const { user, loading, chapterId } = useAuth()
   // Independent fallback: if loading hangs past 3s, show login regardless
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
 
@@ -49,6 +50,16 @@ function AppRoutes() {
         <Route path="/login"  element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="*"       element={<Navigate to="/login" replace />} />
+      </Routes>
+    )
+  }
+
+  // Logged in but no chapter — guide them to complete setup before any data page
+  if (!chapterId) {
+    return (
+      <Routes>
+        <Route path="/complete-setup" element={<CompleteSetup />} />
+        <Route path="*"               element={<Navigate to="/complete-setup" replace />} />
       </Routes>
     )
   }
