@@ -36,7 +36,7 @@ export default function Notifications() {
         setLoading(false)
         setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
       }
-    }, 8000)
+    }, 3000)
     return () => { activeRef.current = false; clearTimeout(timer) }
   }, [])
 

@@ -108,7 +108,7 @@ export default function Dues() {
   useEffect(() => {
     const t = setTimeout(() => {
       if (activeRef.current) { setLoading(false); setError(e => e ?? 'Loading timed out. Please refresh.') }
-    }, 8000)
+    }, 3000)
     return () => { activeRef.current = false; clearTimeout(t) }
   }, [])
 

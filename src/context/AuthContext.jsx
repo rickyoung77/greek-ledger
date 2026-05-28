@@ -158,17 +158,20 @@ export function AuthProvider({ children }) {
       }
     }
 
-    supabase.auth.getSession()
+    // Race getSession() itself against 2.5s — expired tokens trigger a network refresh that can hang
+    Promise.race([
+      supabase.auth.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+    ])
       .then(async ({ data }) => {
         if (!mounted) return
         const s = data?.session ?? null
         setSession(s)
         setUser(s?.user ?? null)
         if (s?.user) {
-          // Race profile load against 2.5s so .finally() fires before the hard ceiling
           await Promise.race([
             refreshProfile(s.user),
-            new Promise((r) => setTimeout(r, 2500)),
+            new Promise((r) => setTimeout(r, 1500)),
           ])
         }
       })
@@ -188,10 +191,19 @@ export function AuthProvider({ children }) {
         setProfile(PROFILE_DEFAULTS)
         resolve()
       } else if (event === 'INITIAL_SESSION') {
-        // Fires synchronously on mount — resolves loading immediately for no-session case
-        if (!s?.user) resolve()
+        // Always resolve — with user, load profile first; without user, resolve immediately
+        if (s?.user) {
+          await Promise.race([
+            (async () => { await ensureChapterExists(s.user); await refreshProfile(s.user) })(),
+            new Promise((r) => setTimeout(r, 2000)),
+          ])
+        }
+        resolve()
       } else if (event === 'TOKEN_REFRESHED' && s?.user) {
         refreshProfile(s.user)
+      } else {
+        // PASSWORD_RECOVERY, USER_UPDATED, or any future event — always unblock loading
+        resolve()
       }
     })
 
