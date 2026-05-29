@@ -66,15 +66,35 @@ create policy "members_delete"
   using (chapter_id in (select id from chapters where user_id = auth.uid()));
 
 
+-- ── Step 4: Backfill existing rows (one-time, safe to re-run) ────
+-- This fixes rows created before user_id columns existed.
+-- Without this, ALL loadProfile paths return null for existing users
+-- because RLS hides rows where user_id is null.
+
+update chapters
+  set user_id = '352f352b-e1f9-414e-b3f4-40a72fec6680'
+  where id     = 'faf704d9-a034-4d5d-9f0a-03d5f9039c76'
+    and user_id is null;
+
+update members
+  set user_id = '352f352b-e1f9-414e-b3f4-40a72fec6680'
+  where id     = 'ae25fc5b-71a7-46c0-a19c-54a08cdd09b8'
+    and user_id is null;
+
+
 -- ── Verify ───────────────────────────────────────────────────
--- Run this query after to confirm columns and policies look right:
+-- Run these after to confirm the fix worked:
 --
--- select column_name, data_type
--- from information_schema.columns
--- where table_name in ('chapters','members') and table_schema = 'public'
--- order by table_name, ordinal_position;
+-- select id, name, user_id from chapters where id = 'faf704d9-a034-4d5d-9f0a-03d5f9039c76';
+-- select id, full_name, user_id from members where id = 'ae25fc5b-71a7-46c0-a19c-54a08cdd09b8';
 --
--- select tablename, policyname, cmd, qual
--- from pg_policies
--- where schemaname = 'public' and tablename in ('chapters','members')
--- order by tablename, cmd;
+-- Both user_id fields should show: 352f352b-e1f9-414e-b3f4-40a72fec6680
+--
+-- Also confirm columns and policies:
+-- select column_name, data_type from information_schema.columns
+--   where table_name in ('chapters','members') and table_schema = 'public'
+--   order by table_name, ordinal_position;
+--
+-- select tablename, policyname, cmd from pg_policies
+--   where schemaname = 'public' and tablename in ('chapters','members')
+--   order by tablename, cmd;

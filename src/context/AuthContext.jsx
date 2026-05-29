@@ -9,55 +9,124 @@ const PROFILE_DEFAULTS = {
 }
 
 async function loadProfile(user) {
+  console.log('[loadProfile] start — user:', user.id)
   try {
-    // Primary path: member record with user_id (new flow)
-    const { data: memberRow } = await supabase
+    // ── Step 1: find member by user_id ───────────────────────
+    // Requires: members.user_id is populated AND members_select RLS can see it.
+    // RLS note: members_select checks chapter ownership — if chapters.user_id is null
+    // on this user's chapter row, this query returns empty even if user_id is set.
+    // Run supabase/fix_setup.sql to repair both columns and the RLS policy.
+    const { data: member, error: mErr } = await supabase
       .from('members')
       .select('id, chapter_id, full_name, role')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (memberRow) {
-      const { data: chapter } = await supabase
+    if (mErr) console.warn('[loadProfile] Step 1 member query failed:', mErr.message)
+    else console.log('[loadProfile] Step 1 member:', member ? member.id : 'not found')
+
+    if (member) {
+      // ── Step 2: load chapter from member.chapter_id ─────────
+      // Use member.chapter_id directly — don't skip if chapter query is blocked by RLS,
+      // because chapterId from the member row is what unlocks the app.
+      const { data: chapter, error: cErr } = await supabase
         .from('chapters')
         .select('id, name, join_code, user_id, semester')
-        .eq('id', memberRow.chapter_id)
+        .eq('id', member.chapter_id)
         .maybeSingle()
 
+      if (cErr) console.warn('[loadProfile] Step 2 chapter query failed:', cErr.message)
+      console.log('[loadProfile] Step 2 chapter:', chapter ? chapter.id : 'not found (using member.chapter_id anyway)')
+
       return {
-        memberId:    memberRow.id,
-        chapterId:   memberRow.chapter_id,
-        fullName:    memberRow.full_name,
-        userRole:    memberRow.role,
-        chapterName: chapter?.name     ?? '',
+        memberId:    member.id,
+        chapterId:   member.chapter_id,           // from member row — reliable even if chapter RLS blocks
+        fullName:    member.full_name,
+        userRole:    member.role,
+        chapterName: chapter?.name      ?? '',
         joinCode:    chapter?.join_code ?? '',
-        isAdmin:     chapter?.user_id  === user.id,
-        semester:    chapter?.semester ?? '',
+        isAdmin:     chapter?.user_id   === user.id,
+        semester:    chapter?.semester  ?? '',
       }
     }
 
-    // Fallback: pre-join-code users whose chapter_id is in JWT metadata
+    // ── Step 3: legacy — chapter_id in JWT metadata (old Signup flow) ───
     const meta = user.user_metadata ?? {}
+    console.log('[loadProfile] Step 3 metadata chapter_id:', meta.chapter_id ?? 'none')
     if (meta.chapter_id) {
-      const { data: chapter } = await supabase
+      const { data: chapter, error: cErr } = await supabase
         .from('chapters')
         .select('id, name, join_code, user_id, semester')
         .eq('id', meta.chapter_id)
         .maybeSingle()
 
-      return {
-        memberId:    null,
-        chapterId:   meta.chapter_id,
-        fullName:    meta.full_name    ?? user.email ?? '',
-        userRole:    meta.role         ?? 'Treasurer',
-        chapterName: chapter?.name     ?? meta.chapter_name ?? '',
-        joinCode:    chapter?.join_code ?? '',
-        isAdmin:     chapter?.user_id  === user.id,
-        semester:    chapter?.semester ?? meta.semester ?? '',
+      if (cErr) console.warn('[loadProfile] Step 3 chapter query failed:', cErr.message)
+      console.log('[loadProfile] Step 3 chapter:', chapter ? chapter.id : 'not found')
+
+      if (chapter) {
+        return {
+          memberId:    null,
+          chapterId:   chapter.id,
+          fullName:    meta.full_name ?? user.email ?? '',
+          userRole:    meta.role      ?? 'Treasurer',
+          chapterName: chapter.name,
+          joinCode:    chapter.join_code ?? '',
+          isAdmin:     chapter.user_id === user.id,
+          semester:    chapter.semester ?? '',
+        }
       }
     }
-  } catch (_) {
-    // Non-fatal
+
+    // ── Step 4: ownership fallback — user owns a chapter but member.user_id is null ───
+    // Works only if chapters.user_id is correctly set. If it's null, run fix_setup.sql.
+    console.log('[loadProfile] Step 4 — checking owned chapter...')
+    const { data: ownedChapter, error: ocErr } = await supabase
+      .from('chapters')
+      .select('id, name, join_code, user_id, semester')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (ocErr) console.warn('[loadProfile] Step 4 chapter query failed:', ocErr.message)
+    console.log('[loadProfile] Step 4 owned chapter:', ownedChapter ? ownedChapter.id : 'not found')
+
+    if (ownedChapter) {
+      const { data: memberByEmail, error: mbErr } = await supabase
+        .from('members')
+        .select('id, chapter_id, full_name, role')
+        .eq('chapter_id', ownedChapter.id)
+        .eq('email', user.email)
+        .maybeSingle()
+
+      if (mbErr) console.warn('[loadProfile] Step 4 member-by-email failed:', mbErr.message)
+      console.log('[loadProfile] Step 4 member by email:', memberByEmail ? memberByEmail.id : 'not found')
+
+      // Backfill both tables in the background so Steps 1+2 work on next login
+      if (memberByEmail) {
+        supabase.from('members').update({ user_id: user.id }).eq('id', memberByEmail.id)
+          .then(({ error: e }) => e
+            ? console.warn('[loadProfile] member backfill failed:', e.message)
+            : console.log('[loadProfile] backfilled members.user_id for', memberByEmail.id))
+      }
+      supabase.from('chapters').update({ user_id: user.id }).eq('id', ownedChapter.id).is('user_id', null)
+        .then(({ error: e }) => e
+          ? console.warn('[loadProfile] chapter backfill failed:', e.message)
+          : console.log('[loadProfile] backfilled chapters.user_id for', ownedChapter.id))
+
+      return {
+        memberId:    memberByEmail?.id       ?? null,
+        chapterId:   ownedChapter.id,
+        fullName:    memberByEmail?.full_name ?? meta.full_name ?? user.email ?? '',
+        userRole:    memberByEmail?.role      ?? meta.role ?? 'Treasurer',
+        chapterName: ownedChapter.name,
+        joinCode:    ownedChapter.join_code ?? '',
+        isAdmin:     true,
+        semester:    ownedChapter.semester  ?? '',
+      }
+    }
+
+    console.log('[loadProfile] all steps exhausted — user needs CompleteSetup')
+  } catch (err) {
+    console.error('[loadProfile] unexpected error:', err)
   }
   return null
 }
