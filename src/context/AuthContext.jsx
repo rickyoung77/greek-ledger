@@ -11,48 +11,36 @@ const PROFILE_DEFAULTS = {
 async function loadProfile(user) {
   console.log('[loadProfile] start — user:', user.id)
   try {
-    // ── Step 1: find member by user_id ───────────────────────
-    // Requires: members.user_id is populated AND members_select RLS can see it.
-    // RLS note: members_select checks chapter ownership — if chapters.user_id is null
-    // on this user's chapter row, this query returns empty even if user_id is set.
-    // Run supabase/fix_setup.sql to repair both columns and the RLS policy.
+    // ── Step 1: member by user_id + chapter in one embedded request ──
+    // Single query for the happy path. chapter_id from the member row is always
+    // used for chapterId — it's reliable even if the chapter RLS blocks the embed.
     const { data: member, error: mErr } = await supabase
       .from('members')
-      .select('id, chapter_id, full_name, role')
+      .select('id, chapter_id, full_name, role, chapters(id, name, join_code, user_id, semester)')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (mErr) console.warn('[loadProfile] Step 1 member query failed:', mErr.message)
-    else console.log('[loadProfile] Step 1 member:', member ? member.id : 'not found')
+    if (mErr) console.warn('[loadProfile] Step 1 failed:', mErr.message)
+    console.log('[loadProfile] Step 1 member:', member ? member.id : 'not found')
 
     if (member) {
-      // ── Step 2: load chapter from member.chapter_id ─────────
-      // Use member.chapter_id directly — don't skip if chapter query is blocked by RLS,
-      // because chapterId from the member row is what unlocks the app.
-      const { data: chapter, error: cErr } = await supabase
-        .from('chapters')
-        .select('id, name, join_code, user_id, semester')
-        .eq('id', member.chapter_id)
-        .maybeSingle()
-
-      if (cErr) console.warn('[loadProfile] Step 2 chapter query failed:', cErr.message)
-      console.log('[loadProfile] Step 2 chapter:', chapter ? chapter.id : 'not found (using member.chapter_id anyway)')
-
+      const ch = member.chapters
+      console.log('[loadProfile] Step 1 chapter:', ch ? ch.id : 'RLS blocked — using member.chapter_id')
       return {
         memberId:    member.id,
-        chapterId:   member.chapter_id,           // from member row — reliable even if chapter RLS blocks
+        chapterId:   member.chapter_id,
         fullName:    member.full_name,
         userRole:    member.role,
-        chapterName: chapter?.name      ?? '',
-        joinCode:    chapter?.join_code ?? '',
-        isAdmin:     chapter?.user_id   === user.id,
-        semester:    chapter?.semester  ?? '',
+        chapterName: ch?.name      ?? '',
+        joinCode:    ch?.join_code ?? '',
+        isAdmin:     ch?.user_id   === user.id,
+        semester:    ch?.semester  ?? '',
       }
     }
 
-    // ── Step 3: legacy — chapter_id in JWT metadata (old Signup flow) ───
+    // ── Step 2: legacy — chapter_id stored in JWT metadata (old Signup flow) ──
     const meta = user.user_metadata ?? {}
-    console.log('[loadProfile] Step 3 metadata chapter_id:', meta.chapter_id ?? 'none')
+    console.log('[loadProfile] Step 2 metadata chapter_id:', meta.chapter_id ?? 'none')
     if (meta.chapter_id) {
       const { data: chapter, error: cErr } = await supabase
         .from('chapters')
@@ -60,8 +48,8 @@ async function loadProfile(user) {
         .eq('id', meta.chapter_id)
         .maybeSingle()
 
-      if (cErr) console.warn('[loadProfile] Step 3 chapter query failed:', cErr.message)
-      console.log('[loadProfile] Step 3 chapter:', chapter ? chapter.id : 'not found')
+      if (cErr) console.warn('[loadProfile] Step 2 failed:', cErr.message)
+      console.log('[loadProfile] Step 2 chapter:', chapter ? chapter.id : 'not found')
 
       if (chapter) {
         return {
@@ -77,17 +65,17 @@ async function loadProfile(user) {
       }
     }
 
-    // ── Step 4: ownership fallback — user owns a chapter but member.user_id is null ───
-    // Works only if chapters.user_id is correctly set. If it's null, run fix_setup.sql.
-    console.log('[loadProfile] Step 4 — checking owned chapter...')
+    // ── Step 3: ownership fallback — member.user_id is null (pre-migration row) ──
+    // Requires chapters.user_id to be set. If this also returns nothing, run fix_setup.sql.
+    console.log('[loadProfile] Step 3 — checking owned chapter...')
     const { data: ownedChapter, error: ocErr } = await supabase
       .from('chapters')
       .select('id, name, join_code, user_id, semester')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (ocErr) console.warn('[loadProfile] Step 4 chapter query failed:', ocErr.message)
-    console.log('[loadProfile] Step 4 owned chapter:', ownedChapter ? ownedChapter.id : 'not found')
+    if (ocErr) console.warn('[loadProfile] Step 3 chapter failed:', ocErr.message)
+    console.log('[loadProfile] Step 3 owned chapter:', ownedChapter ? ownedChapter.id : 'not found')
 
     if (ownedChapter) {
       const { data: memberByEmail, error: mbErr } = await supabase
@@ -97,20 +85,20 @@ async function loadProfile(user) {
         .eq('email', user.email)
         .maybeSingle()
 
-      if (mbErr) console.warn('[loadProfile] Step 4 member-by-email failed:', mbErr.message)
-      console.log('[loadProfile] Step 4 member by email:', memberByEmail ? memberByEmail.id : 'not found')
+      if (mbErr) console.warn('[loadProfile] Step 3 member-by-email failed:', mbErr.message)
+      console.log('[loadProfile] Step 3 member by email:', memberByEmail ? memberByEmail.id : 'not found')
 
-      // Backfill both tables in the background so Steps 1+2 work on next login
+      // Backfill in background so Step 1 works on next login
       if (memberByEmail) {
         supabase.from('members').update({ user_id: user.id }).eq('id', memberByEmail.id)
           .then(({ error: e }) => e
             ? console.warn('[loadProfile] member backfill failed:', e.message)
-            : console.log('[loadProfile] backfilled members.user_id for', memberByEmail.id))
+            : console.log('[loadProfile] backfilled members.user_id'))
       }
       supabase.from('chapters').update({ user_id: user.id }).eq('id', ownedChapter.id).is('user_id', null)
         .then(({ error: e }) => e
           ? console.warn('[loadProfile] chapter backfill failed:', e.message)
-          : console.log('[loadProfile] backfilled chapters.user_id for', ownedChapter.id))
+          : console.log('[loadProfile] backfilled chapters.user_id'))
 
       return {
         memberId:    memberByEmail?.id       ?? null,
@@ -215,64 +203,53 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
-    // Absolute ceiling: loading must resolve within 3 seconds no matter what
+    // Absolute ceiling — if INITIAL_SESSION never fires, unblock after 8s
     const hardTimeout = setTimeout(() => {
-      if (mounted) setLoading(false)
-    }, 3000)
+      if (mounted) {
+        console.warn('[auth] hard timeout — forcing loading=false')
+        setLoading(false)
+      }
+    }, 8000)
 
-    const resolve = () => {
+    function unblock() {
       if (mounted) {
         clearTimeout(hardTimeout)
         setLoading(false)
       }
     }
 
-    // Race getSession() itself against 2.5s — expired tokens trigger a network refresh that can hang
-    Promise.race([
-      supabase.auth.getSession(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
-    ])
-      .then(async ({ data }) => {
-        if (!mounted) return
-        const s = data?.session ?? null
-        setSession(s)
-        setUser(s?.user ?? null)
-        if (s?.user) {
-          await Promise.race([
-            refreshProfile(s.user),
-            new Promise((r) => setTimeout(r, 1500)),
-          ])
-        }
-      })
-      .catch(() => {})
-      .finally(resolve)
-
+    // onAuthStateChange is the single source of truth.
+    // INITIAL_SESSION fires synchronously on subscribe with the current cached session —
+    // no separate getSession() call needed. That call was creating a competing path
+    // with a shorter 1500ms race that cut off loadProfile before it finished,
+    // causing chapterId to be null when loading resolved (→ flash of CompleteSetup).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       if (!mounted) return
+      console.log('[auth] event:', event, '| user:', s?.user?.id ?? 'none')
+
       setSession(s)
       setUser(s?.user ?? null)
 
-      if (event === 'SIGNED_IN' && s?.user) {
-        await ensureChapterExists(s.user)
-        await refreshProfile(s.user)
-        resolve()
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(PROFILE_DEFAULTS)
-        resolve()
-      } else if (event === 'INITIAL_SESSION') {
-        // Always resolve — with user, load profile first; without user, resolve immediately
+      if (event === 'INITIAL_SESSION') {
         if (s?.user) {
+          // Give profile load up to 6s — enough for 3 sequential DB queries on a slow connection
           await Promise.race([
             (async () => { await ensureChapterExists(s.user); await refreshProfile(s.user) })(),
-            new Promise((r) => setTimeout(r, 2000)),
+            new Promise((r) => setTimeout(r, 6000)),
           ])
         }
-        resolve()
+        unblock()
+      } else if (event === 'SIGNED_IN' && s?.user) {
+        await ensureChapterExists(s.user)
+        await refreshProfile(s.user)
+        unblock()
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(PROFILE_DEFAULTS)
+        unblock()
       } else if (event === 'TOKEN_REFRESHED' && s?.user) {
-        refreshProfile(s.user)
+        refreshProfile(s.user) // background — don't block or re-trigger loading
       } else {
-        // PASSWORD_RECOVERY, USER_UPDATED, or any future event — always unblock loading
-        resolve()
+        unblock() // PASSWORD_RECOVERY, USER_UPDATED, etc.
       }
     })
 

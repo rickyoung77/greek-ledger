@@ -15,12 +15,13 @@ import CompleteSetup from './pages/CompleteSetup'
 
 function AppRoutes() {
   const { user, loading, chapterId } = useAuth()
-  // Independent fallback: if loading hangs past 3s, show login regardless
+  // Independent fallback: if loading hangs past 7s, force past the spinner.
+  // Must be less than AuthContext's 8s hardTimeout so this fires first.
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
 
   useEffect(() => {
     if (!loading) { setLoadingTimedOut(false); return }
-    const t = setTimeout(() => setLoadingTimedOut(true), 3000)
+    const t = setTimeout(() => setLoadingTimedOut(true), 7000)
     return () => clearTimeout(t)
   }, [loading])
 
