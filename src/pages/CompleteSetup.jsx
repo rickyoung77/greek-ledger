@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
+console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
+console.log('Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY)
+
 const SEMESTERS = ['Spring 2026', 'Fall 2026', 'Spring 2027', 'Fall 2027']
 const ROLES     = ['Treasurer', 'President', 'VP Finance', 'Secretary', 'Social Chair', 'Member']
 const YEARS     = ['Freshman', 'Sophomore', 'Junior', 'Senior', '5th Year']
