@@ -34,65 +34,145 @@ export default function CompleteSetup() {
 
   async function handleCreate() {
     if (!createForm.chapterName.trim()) { setError('Chapter name is required.'); return }
-    setSaving(true); setError(null)
+    setSaving(true)
+    setError(null)
+
+    let timedOut = false
+    const timeoutId = setTimeout(() => {
+      timedOut = true
+      setSaving(false)
+      setError('Something went wrong — it took too long. Please try again.')
+    }, 8000)
+
     try {
+      console.log('Starting chapter creation')
+
+      // Pull directly from session — never rely on context user, which can lag after signup
+      const { data: { session: sess }, error: sessErr } = await supabase.auth.getSession()
+      if (sessErr || !sess?.user) throw new Error(sessErr?.message ?? 'Not authenticated. Please sign in again.')
+      const userId = sess.user.id
+      console.log('Auth confirmed, user_id:', userId)
+
       const chapterId = crypto.randomUUID()
       const joinCode  = Math.random().toString(36).substring(2, 8).toUpperCase()
 
-      const { error: chapErr } = await supabase.from('chapters').insert({
-        id:        chapterId,
-        name:      createForm.chapterName.trim(),
-        semester:  createForm.semester,
-        user_id:   user.id,
-        join_code: joinCode,
-      })
-      if (chapErr) throw chapErr
+      console.log('Inserting chapter:', { id: chapterId, name: createForm.chapterName.trim(), user_id: userId })
+      const { data: chapter, error: chapErr } = await supabase
+        .from('chapters')
+        .insert({
+          id:        chapterId,
+          name:      createForm.chapterName.trim(),
+          semester:  createForm.semester,
+          user_id:   userId,
+          join_code: joinCode,
+        })
+        .select()
+        .single()
+      if (chapErr) throw new Error(`Chapter insert failed: ${chapErr.message}`)
+      console.log('Chapter created:', chapter)
 
-      const { error: memErr } = await supabase.from('members').insert({
-        chapter_id:  chapterId,
-        full_name:   fullName || user.email,
-        role:        createForm.role,
-        year:        'Senior',
-        dues_status: 'Paid',
-        email:       user.email,
-        user_id:     user.id,
-      })
-      if (memErr) throw memErr
+      console.log('Creating member record:', { chapter_id: chapterId, user_id: userId, role: createForm.role })
+      const { data: member, error: memErr } = await supabase
+        .from('members')
+        .insert({
+          chapter_id:  chapterId,
+          user_id:     userId,
+          full_name:   fullName || sess.user.email,
+          role:        createForm.role,
+          year:        'Senior',
+          dues_status: 'Paid',
+          email:       sess.user.email,
+        })
+        .select()
+        .single()
+      if (memErr) throw new Error(`Member insert failed: ${memErr.message}`)
+      console.log('Member created:', member)
 
-      await refreshProfile()
-      navigate('/', { replace: true })
+      clearTimeout(timeoutId)
+      console.log('Setup complete — refreshing profile')
+
+      // Cap refreshProfile at 4s — it must never block navigation
+      await Promise.race([
+        refreshProfile(),
+        new Promise((r) => setTimeout(r, 4000)),
+      ])
+
+      if (!timedOut) {
+        console.log('Navigating to dashboard')
+        navigate('/', { replace: true })
+      }
     } catch (err) {
-      setError(err?.message ?? 'Failed to create chapter. Please try again.')
+      clearTimeout(timeoutId)
+      console.error('Chapter creation failed:', err)
+      if (!timedOut) setError(err?.message ?? 'Failed to create chapter. Please try again.')
     } finally {
-      setSaving(false)
+      clearTimeout(timeoutId)
+      if (!timedOut) setSaving(false)
     }
   }
 
   async function handleJoin() {
     if (joinForm.joinCode.length !== 6) { setError('Enter a valid 6-character join code.'); return }
-    setSaving(true); setError(null)
+    setSaving(true)
+    setError(null)
+
+    let timedOut = false
+    const timeoutId = setTimeout(() => {
+      timedOut = true
+      setSaving(false)
+      setError('Something went wrong — it took too long. Please try again.')
+    }, 8000)
+
     try {
+      console.log('Starting join flow')
+
+      const { data: { session: sess }, error: sessErr } = await supabase.auth.getSession()
+      if (sessErr || !sess?.user) throw new Error(sessErr?.message ?? 'Not authenticated. Please sign in again.')
+      const userId = sess.user.id
+      console.log('Auth confirmed, user_id:', userId)
+
       const { data: rows, error: lookupErr } = await supabase
         .rpc('lookup_join_code', { code: joinForm.joinCode.toUpperCase() })
-      if (lookupErr || !rows?.length) throw new Error('Invalid join code. Check with your treasurer and try again.')
+      if (lookupErr) throw new Error(`Join code lookup failed: ${lookupErr.message}`)
+      if (!rows?.length) throw new Error('Invalid join code. Check with your treasurer and try again.')
+      console.log('Join code valid, chapter_id:', rows[0].chapter_id)
 
-      const { error: memErr } = await supabase.from('members').insert({
-        chapter_id:  rows[0].chapter_id,
-        full_name:   fullName || user.email,
-        role:        'Member',
-        year:        joinForm.year,
-        dues_status: 'Pending',
-        email:       user.email,
-        user_id:     user.id,
-      })
-      if (memErr) throw memErr
+      console.log('Creating member record:', { chapter_id: rows[0].chapter_id, user_id: userId })
+      const { data: member, error: memErr } = await supabase
+        .from('members')
+        .insert({
+          chapter_id:  rows[0].chapter_id,
+          user_id:     userId,
+          full_name:   fullName || sess.user.email,
+          role:        'Member',
+          year:        joinForm.year,
+          dues_status: 'Pending',
+          email:       sess.user.email,
+        })
+        .select()
+        .single()
+      if (memErr) throw new Error(`Member insert failed: ${memErr.message}`)
+      console.log('Member created:', member)
 
-      await refreshProfile()
-      navigate('/', { replace: true })
+      clearTimeout(timeoutId)
+      console.log('Join complete — refreshing profile')
+
+      await Promise.race([
+        refreshProfile(),
+        new Promise((r) => setTimeout(r, 4000)),
+      ])
+
+      if (!timedOut) {
+        console.log('Navigating to dashboard')
+        navigate('/', { replace: true })
+      }
     } catch (err) {
-      setError(err?.message ?? 'Failed to join chapter. Please try again.')
+      clearTimeout(timeoutId)
+      console.error('Join failed:', err)
+      if (!timedOut) setError(err?.message ?? 'Failed to join chapter. Please try again.')
     } finally {
-      setSaving(false)
+      clearTimeout(timeoutId)
+      if (!timedOut) setSaving(false)
     }
   }
 
