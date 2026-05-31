@@ -33,7 +33,7 @@ function SpinnerIcon() {
 }
 
 export default function Signup() {
-  const { signUp, joinChapter } = useAuth()
+  const { signUp, signUpJoin } = useAuth()
 
   const [mode, setMode] = useState(null) // null | 'create' | 'join'
   const [createForm, setCreateForm] = useState({
@@ -63,7 +63,7 @@ export default function Signup() {
   async function handleJoin(e) {
     e.preventDefault()
     setError(null); setLoading(true)
-    const { error: err, needsEmailConfirmation } = await joinChapter(joinForm)
+    const { error: err, needsEmailConfirmation } = await signUpJoin(joinForm)
     if (err) { setError(err.message); setLoading(false); return }
     if (needsEmailConfirmation) { setSentEmail(joinForm.email); setEmailSent(true) }
     setLoading(false)
@@ -141,7 +141,7 @@ export default function Signup() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">Create a Chapter</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Set up Greek Ledger for your fraternity — you're the treasurer or admin</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Set up Greek Ledger for your fraternity — you&apos;re the treasurer or admin</p>
                       </div>
                     </div>
                   </button>
@@ -288,7 +288,7 @@ export default function Signup() {
                       className="w-full border border-gray-200 rounded-lg px-4 py-3 text-center font-mono font-bold text-xl text-gray-900 placeholder-gray-300 focus:outline-none transition tracking-widest"
                       {...focusHandlers}
                     />
-                    <p className="text-xs text-gray-400 mt-1.5 text-center">6-character code from your chapter's treasurer</p>
+                    <p className="text-xs text-gray-400 mt-1.5 text-center">6-character code from your chapter&apos;s treasurer</p>
                   </div>
 
                   <div className="border-t border-gray-100" />

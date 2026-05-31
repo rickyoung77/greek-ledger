@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
@@ -112,13 +112,8 @@ export default function Dues() {
     return () => { activeRef.current = false; clearTimeout(t) }
   }, [])
 
-  useEffect(() => {
-    if (chapterId) load()
-    else if (!authLoading) setLoading(false)
-  }, [chapterId, authLoading])
-
   // ── Data loading ──
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
       const { data: cols, error: e1 } = await supabase
@@ -144,7 +139,12 @@ export default function Dues() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [chapterId])
+
+  useEffect(() => {
+    if (chapterId) load()
+    else if (!authLoading) setLoading(false)
+  }, [chapterId, authLoading, load])
 
   // ── Create collection ──
   async function openCreate() {

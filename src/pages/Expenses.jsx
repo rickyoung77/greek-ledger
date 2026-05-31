@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
@@ -48,12 +48,7 @@ export default function Expenses() {
     return () => { activeRef.current = false; clearTimeout(timer) }
   }, [])
 
-  useEffect(() => {
-    if (chapterId) load()
-    else if (!authLoading) setLoading(false)
-  }, [chapterId, authLoading])
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -70,7 +65,12 @@ export default function Expenses() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [chapterId])
+
+  useEffect(() => {
+    if (chapterId) load()
+    else if (!authLoading) setLoading(false)
+  }, [chapterId, authLoading, load])
 
   async function updateStatus(id, next) {
     setSavingId(id)

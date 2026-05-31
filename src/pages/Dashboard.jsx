@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -60,12 +60,7 @@ export default function Dashboard() {
     return () => { activeRef.current = false; clearTimeout(timer) }
   }, [])
 
-  useEffect(() => {
-    if (chapterId) load()
-    else if (!authLoading) setLoading(false)
-  }, [chapterId, authLoading])
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -114,7 +109,12 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [chapterId])
+
+  useEffect(() => {
+    if (chapterId) load()
+    else if (!authLoading) setLoading(false)
+  }, [chapterId, authLoading, load])
 
   async function handleSubmit() {
     const { error } = await supabase.from('expenses').insert({

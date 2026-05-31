@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
@@ -100,12 +100,7 @@ export default function BudgetAccounts() {
     return () => { activeRef.current = false; clearTimeout(timer) }
   }, [])
 
-  useEffect(() => {
-    if (chapterId) load()
-    else if (!authLoading) setLoading(false)
-  }, [chapterId, authLoading])
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -147,7 +142,12 @@ export default function BudgetAccounts() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [chapterId])
+
+  useEffect(() => {
+    if (chapterId) load()
+    else if (!authLoading) setLoading(false)
+  }, [chapterId, authLoading, load])
 
   function openCreate() {
     setCreateForm({ name: '', total_budget: '', color: '#3b82f6' })

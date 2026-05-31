@@ -111,7 +111,7 @@ export default function Settings() {
 
             <div className="mt-5 p-4 rounded-lg" style={{ backgroundColor: '#fffbeb', borderLeft: '3px solid #c9a84c' }}>
               <p className="text-xs text-amber-800">
-                <span className="font-semibold">How it works:</span> Members go to the signup page, choose "Join a Chapter", and enter this code. They'll be added to your chapter immediately.
+                <span className="font-semibold">How it works:</span> Members go to the signup page, choose &quot;Join a Chapter&quot;, and enter this code. They&apos;ll be added to your chapter immediately.
               </p>
             </div>
           </div>

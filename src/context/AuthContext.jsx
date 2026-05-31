@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, withTimeout } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
@@ -8,189 +8,43 @@ const PROFILE_DEFAULTS = {
   chapterName: '', joinCode: '', isAdmin: false, semester: '',
 }
 
+// Load the signed-in user's profile in ONE query.
+// members.user_id -> the single membership row; the embedded `chapters(...)`
+// comes back via the members.chapter_id foreign key. With the non-recursive
+// RLS in schema.sql this resolves in a single round-trip and cannot hang the
+// auth lock. Returns null if the user has no chapter yet (-> CompleteSetup).
 async function loadProfile(user) {
-  console.log('[loadProfile] start — user:', user.id)
   try {
-    // ── Step 1: member by user_id ────────────────────────────────
-    const { data: member, error: mErr } = await supabase
-      .from('members')
-      .select('id, chapter_id, full_name, role')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (mErr) console.warn('[loadProfile] Step 1 failed:', mErr.message)
-    console.log('[loadProfile] Step 1 member:', member ? member.id : 'not found')
-
-    if (member) {
-      // ── Step 1b: load chapter by chapter_id from member row ──
-      const { data: ch, error: chErr } = await supabase
-        .from('chapters')
-        .select('id, name, join_code, user_id, semester')
-        .eq('id', member.chapter_id)
-        .maybeSingle()
-
-      if (chErr) console.warn('[loadProfile] Step 1b chapter failed:', chErr.message)
-      console.log('[loadProfile] Step 1b chapter:', ch ? ch.id : 'RLS blocked — using member.chapter_id directly')
-
-      return {
-        memberId:    member.id,
-        chapterId:   member.chapter_id,  // from member row — reliable even when chapter RLS blocks
-        fullName:    member.full_name,
-        userRole:    member.role,
-        chapterName: ch?.name      ?? '',
-        joinCode:    ch?.join_code ?? '',
-        isAdmin:     ch?.user_id   === user.id,
-        semester:    ch?.semester  ?? '',
-      }
-    }
-
-    // ── Step 2: legacy — chapter_id stored in JWT metadata (old Signup flow) ──
-    const meta = user.user_metadata ?? {}
-    console.log('[loadProfile] Step 2 metadata chapter_id:', meta.chapter_id ?? 'none')
-    if (meta.chapter_id) {
-      const { data: chapter, error: cErr } = await supabase
-        .from('chapters')
-        .select('id, name, join_code, user_id, semester')
-        .eq('id', meta.chapter_id)
-        .maybeSingle()
-
-      if (cErr) console.warn('[loadProfile] Step 2 failed:', cErr.message)
-      console.log('[loadProfile] Step 2 chapter:', chapter ? chapter.id : 'not found')
-
-      if (chapter) {
-        return {
-          memberId:    null,
-          chapterId:   chapter.id,
-          fullName:    meta.full_name ?? user.email ?? '',
-          userRole:    meta.role      ?? 'Treasurer',
-          chapterName: chapter.name,
-          joinCode:    chapter.join_code ?? '',
-          isAdmin:     chapter.user_id === user.id,
-          semester:    chapter.semester ?? '',
-        }
-      }
-    }
-
-    // ── Step 3: ownership fallback — member.user_id is null (pre-migration row) ──
-    // Requires chapters.user_id to be set. If this also returns nothing, run fix_setup.sql.
-    console.log('[loadProfile] Step 3 — checking owned chapter...')
-    const { data: ownedChapter, error: ocErr } = await supabase
-      .from('chapters')
-      .select('id, name, join_code, user_id, semester')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (ocErr) console.warn('[loadProfile] Step 3 chapter failed:', ocErr.message)
-    console.log('[loadProfile] Step 3 owned chapter:', ownedChapter ? ownedChapter.id : 'not found')
-
-    if (ownedChapter) {
-      const { data: memberByEmail, error: mbErr } = await supabase
+    const { data: member, error } = await withTimeout(
+      supabase
         .from('members')
-        .select('id, chapter_id, full_name, role')
-        .eq('chapter_id', ownedChapter.id)
-        .eq('email', user.email)
-        .maybeSingle()
-
-      if (mbErr) console.warn('[loadProfile] Step 3 member-by-email failed:', mbErr.message)
-      console.log('[loadProfile] Step 3 member by email:', memberByEmail ? memberByEmail.id : 'not found')
-
-      // Backfill in background so Step 1 works on next login
-      if (memberByEmail) {
-        supabase.from('members').update({ user_id: user.id }).eq('id', memberByEmail.id)
-          .then(({ error: e }) => e
-            ? console.warn('[loadProfile] member backfill failed:', e.message)
-            : console.log('[loadProfile] backfilled members.user_id'))
-      }
-      supabase.from('chapters').update({ user_id: user.id }).eq('id', ownedChapter.id).is('user_id', null)
-        .then(({ error: e }) => e
-          ? console.warn('[loadProfile] chapter backfill failed:', e.message)
-          : console.log('[loadProfile] backfilled chapters.user_id'))
-
-      return {
-        memberId:    memberByEmail?.id       ?? null,
-        chapterId:   ownedChapter.id,
-        fullName:    memberByEmail?.full_name ?? meta.full_name ?? user.email ?? '',
-        userRole:    memberByEmail?.role      ?? meta.role ?? 'Treasurer',
-        chapterName: ownedChapter.name,
-        joinCode:    ownedChapter.join_code ?? '',
-        isAdmin:     true,
-        semester:    ownedChapter.semester  ?? '',
-      }
-    }
-
-    console.log('[loadProfile] all steps exhausted — user needs CompleteSetup')
-  } catch (err) {
-    console.error('[loadProfile] unexpected error:', err)
-  }
-  return null
-}
-
-async function ensureChapterExists(user) {
-  const meta = user.user_metadata ?? {}
-  const flow = meta.flow
-
-  try {
-    if (flow === 'join') {
-      const { count } = await supabase
-        .from('members')
-        .select('*', { count: 'exact', head: true })
+        .select('id, chapter_id, full_name, role, chapters ( name, join_code, semester, created_by )')
         .eq('user_id', user.id)
+        .maybeSingle(),
+      6000,
+      'profile load'
+    )
 
-      if (count === 0) {
-        const { data: rows } = await supabase
-          .rpc('lookup_join_code', { code: meta.join_code ?? '' })
-
-        if (rows?.[0]) {
-          await supabase.from('members').insert({
-            chapter_id:  rows[0].chapter_id,
-            full_name:   meta.full_name || user.email,
-            role:        'Member',
-            year:        meta.year || 'Freshman',
-            dues_status: 'Pending',
-            email:       user.email,
-            user_id:     user.id,
-          })
-        }
-      }
-    } else if (flow === 'create' || (meta.chapter_id && !flow)) {
-      const chapterId = meta.chapter_id
-      if (!chapterId || !meta.chapter_name) return
-
-      const { count } = await supabase
-        .from('chapters')
-        .select('*', { count: 'exact', head: true })
-        .eq('id', chapterId)
-
-      if (count === 0) {
-        const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-        await supabase.from('chapters').insert({
-          id:        chapterId,
-          name:      meta.chapter_name,
-          semester:  meta.semester || 'Fall 2026',
-          user_id:   user.id,
-          join_code: joinCode,
-        })
-        await supabase.from('members').insert({
-          chapter_id:  chapterId,
-          full_name:   meta.full_name || user.email,
-          role:        meta.role || 'Treasurer',
-          year:        'Senior',
-          dues_status: 'Paid',
-          email:       user.email,
-          user_id:     user.id,
-        })
-      } else {
-        // Backfill user_id for existing member records (pre-join-code migration)
-        await supabase
-          .from('members')
-          .update({ user_id: user.id })
-          .eq('chapter_id', chapterId)
-          .is('user_id', null)
-          .eq('email', user.email)
-      }
+    if (error) {
+      console.warn('[auth] loadProfile error:', error.message)
+      return null
     }
-  } catch (_) {
-    // Non-fatal
+    if (!member) return null
+
+    const chapter = member.chapters ?? {}
+    return {
+      memberId:    member.id,
+      chapterId:   member.chapter_id,
+      fullName:    member.full_name ?? '',
+      userRole:    member.role ?? 'Member',
+      chapterName: chapter.name ?? '',
+      joinCode:    chapter.join_code ?? '',
+      semester:    chapter.semester ?? '',
+      isAdmin:     chapter.created_by === user.id,
+    }
+  } catch (err) {
+    console.warn('[auth] loadProfile threw:', err?.message ?? err)
+    return null
   }
 }
 
@@ -203,71 +57,44 @@ export function AuthProvider({ children }) {
   const refreshProfile = useCallback(async (u) => {
     if (!u) { setProfile(PROFILE_DEFAULTS); return }
     const p = await loadProfile(u)
-    if (p) setProfile(p)
+    setProfile(p ?? PROFILE_DEFAULTS)
   }, [])
 
   useEffect(() => {
     let mounted = true
 
-    // Absolute ceiling — if INITIAL_SESSION never fires, unblock after 8s
+    // Safety net: never let the initial spinner outlive the auth check.
     const hardTimeout = setTimeout(() => {
-      if (mounted) {
-        console.warn('[auth] hard timeout — forcing loading=false')
-        setLoading(false)
-      }
+      if (mounted) setLoading(false)
     }, 8000)
 
-    function unblock() {
-      if (mounted) {
-        clearTimeout(hardTimeout)
-        setLoading(false)
-      }
-    }
-
-    // onAuthStateChange is the single source of truth.
-    // INITIAL_SESSION fires synchronously on subscribe with the current cached session —
-    // no separate getSession() call needed. That call was creating a competing path
-    // with a shorter 1500ms race that cut off loadProfile before it finished,
-    // causing chapterId to be null when loading resolved (→ flash of CompleteSetup).
+    // onAuthStateChange is the single source of truth. It fires INITIAL_SESSION
+    // synchronously on subscribe with the cached session, so no separate
+    // getSession() call (and no competing load path) is needed.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       if (!mounted) return
-      console.log('[auth] event:', event, '| user:', s?.user?.id ?? 'none')
 
-      // Synchronous state only here — NEVER call a Supabase data method (or await
-      // one) directly in this callback. auth-js runs it while HOLDING its navigator
-      // auth lock; any supabase.from()/getSession() issued here queues behind this
-      // very callback for the access token and deadlocks (query never resolves).
-      // So we set who's logged in synchronously, then defer all data work with
-      // setTimeout(0) — that lets the callback return, the lock release, and the
-      // deferred queries actually run.
+      // Only synchronous state here. NEVER await a Supabase data call directly
+      // inside this callback — auth-js holds an internal lock while it runs, and
+      // a query issued here would queue behind the lock and deadlock. Defer all
+      // data work with setTimeout(0) so the callback returns and the lock frees.
       setSession(s)
       setUser(s?.user ?? null)
 
-      if (event === 'SIGNED_OUT') {
+      if (!s?.user) {
         setProfile(PROFILE_DEFAULTS)
-        unblock()
+        setLoading(false)
         return
       }
 
-      if (event === 'TOKEN_REFRESHED' && s?.user) {
-        // Background refresh — don't block or re-trigger loading. Still deferred so
-        // it isn't issued from inside the lock.
-        setTimeout(() => { if (mounted) refreshProfile(s.user) }, 0)
-        return
-      }
-
-      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && s?.user) {
-        setTimeout(async () => {
-          if (!mounted) return
-          await ensureChapterExists(s.user)
-          await refreshProfile(s.user)
-          unblock() // loading=false only AFTER the profile (chapterId) is loaded
-        }, 0)
-        return
-      }
-
-      // INITIAL_SESSION with no user, PASSWORD_RECOVERY, USER_UPDATED, etc.
-      unblock()
+      setTimeout(async () => {
+        if (!mounted) return
+        await refreshProfile(s.user)
+        if (mounted) {
+          clearTimeout(hardTimeout)
+          setLoading(false)
+        }
+      }, 0)
     })
 
     return () => {
@@ -282,16 +109,21 @@ export function AuthProvider({ children }) {
     return { error }
   }
 
+  // Sign up creates the AUTH account only. Chapter create/join details are
+  // stashed in user_metadata so CompleteSetup can pre-fill and the user
+  // finishes with one click against a guaranteed session. No DB writes happen
+  // here — that keeps signup from racing email confirmation or the auth lock.
   async function signUp({ email, password, fullName, chapterName, semester, role }) {
-    const chapterId = crypto.randomUUID()
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           flow: 'create',
-          chapter_id: chapterId, chapter_name: chapterName,
-          semester, role, full_name: fullName,
+          full_name: fullName,
+          chapter_name: chapterName,
+          semester,
+          role,
         },
       },
     })
@@ -299,10 +131,12 @@ export function AuthProvider({ children }) {
     return { error: null, needsEmailConfirmation: !data.session }
   }
 
-  async function joinChapter({ email, password, fullName, joinCode, year }) {
+  // Validate the join code up front (so a bad code fails before account
+  // creation), then sign up with the join details in metadata.
+  async function signUpJoin({ email, password, fullName, joinCode, year }) {
+    const code = joinCode.toUpperCase().trim()
     const { data: rows, error: lookupErr } = await supabase
-      .rpc('lookup_join_code', { code: joinCode.toUpperCase().trim() })
-
+      .rpc('lookup_join_code', { code })
     if (lookupErr || !rows?.length) {
       return { error: { message: 'Invalid join code. Please check with your treasurer and try again.' } }
     }
@@ -313,8 +147,8 @@ export function AuthProvider({ children }) {
       options: {
         data: {
           flow: 'join',
-          join_code: joinCode.toUpperCase().trim(),
           full_name: fullName,
+          join_code: code,
           year: year || 'Freshman',
         },
       },
@@ -334,10 +168,10 @@ export function AuthProvider({ children }) {
         session,
         loading,
         ...profile,
-        refreshProfile: () => user && refreshProfile(user),
+        refreshProfile: () => refreshProfile(user),
         signIn,
         signUp,
-        joinChapter,
+        signUpJoin,
         signOut,
       }}
     >
@@ -346,4 +180,5 @@ export function AuthProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext)
