@@ -11,12 +11,10 @@ const PROFILE_DEFAULTS = {
 async function loadProfile(user) {
   console.log('[loadProfile] start — user:', user.id)
   try {
-    // ── Step 1: member by user_id + chapter in one embedded request ──
-    // Single query for the happy path. chapter_id from the member row is always
-    // used for chapterId — it's reliable even if the chapter RLS blocks the embed.
+    // ── Step 1: member by user_id ────────────────────────────────
     const { data: member, error: mErr } = await supabase
       .from('members')
-      .select('id, chapter_id, full_name, role, chapters(id, name, join_code, user_id, semester)')
+      .select('id, chapter_id, full_name, role')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -24,11 +22,19 @@ async function loadProfile(user) {
     console.log('[loadProfile] Step 1 member:', member ? member.id : 'not found')
 
     if (member) {
-      const ch = member.chapters
-      console.log('[loadProfile] Step 1 chapter:', ch ? ch.id : 'RLS blocked — using member.chapter_id')
+      // ── Step 1b: load chapter by chapter_id from member row ──
+      const { data: ch, error: chErr } = await supabase
+        .from('chapters')
+        .select('id, name, join_code, user_id, semester')
+        .eq('id', member.chapter_id)
+        .maybeSingle()
+
+      if (chErr) console.warn('[loadProfile] Step 1b chapter failed:', chErr.message)
+      console.log('[loadProfile] Step 1b chapter:', ch ? ch.id : 'RLS blocked — using member.chapter_id directly')
+
       return {
         memberId:    member.id,
-        chapterId:   member.chapter_id,
+        chapterId:   member.chapter_id,  // from member row — reliable even when chapter RLS blocks
         fullName:    member.full_name,
         userRole:    member.role,
         chapterName: ch?.name      ?? '',
@@ -223,34 +229,45 @@ export function AuthProvider({ children }) {
     // no separate getSession() call needed. That call was creating a competing path
     // with a shorter 1500ms race that cut off loadProfile before it finished,
     // causing chapterId to be null when loading resolved (→ flash of CompleteSetup).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       if (!mounted) return
       console.log('[auth] event:', event, '| user:', s?.user?.id ?? 'none')
 
+      // Synchronous state only here — NEVER call a Supabase data method (or await
+      // one) directly in this callback. auth-js runs it while HOLDING its navigator
+      // auth lock; any supabase.from()/getSession() issued here queues behind this
+      // very callback for the access token and deadlocks (query never resolves).
+      // So we set who's logged in synchronously, then defer all data work with
+      // setTimeout(0) — that lets the callback return, the lock release, and the
+      // deferred queries actually run.
       setSession(s)
       setUser(s?.user ?? null)
 
-      if (event === 'INITIAL_SESSION') {
-        if (s?.user) {
-          // Give profile load up to 6s — enough for 3 sequential DB queries on a slow connection
-          await Promise.race([
-            (async () => { await ensureChapterExists(s.user); await refreshProfile(s.user) })(),
-            new Promise((r) => setTimeout(r, 6000)),
-          ])
-        }
-        unblock()
-      } else if (event === 'SIGNED_IN' && s?.user) {
-        await ensureChapterExists(s.user)
-        await refreshProfile(s.user)
-        unblock()
-      } else if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT') {
         setProfile(PROFILE_DEFAULTS)
         unblock()
-      } else if (event === 'TOKEN_REFRESHED' && s?.user) {
-        refreshProfile(s.user) // background — don't block or re-trigger loading
-      } else {
-        unblock() // PASSWORD_RECOVERY, USER_UPDATED, etc.
+        return
       }
+
+      if (event === 'TOKEN_REFRESHED' && s?.user) {
+        // Background refresh — don't block or re-trigger loading. Still deferred so
+        // it isn't issued from inside the lock.
+        setTimeout(() => { if (mounted) refreshProfile(s.user) }, 0)
+        return
+      }
+
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && s?.user) {
+        setTimeout(async () => {
+          if (!mounted) return
+          await ensureChapterExists(s.user)
+          await refreshProfile(s.user)
+          unblock() // loading=false only AFTER the profile (chapterId) is loaded
+        }, 0)
+        return
+      }
+
+      // INITIAL_SESSION with no user, PASSWORD_RECOVERY, USER_UPDATED, etc.
+      unblock()
     })
 
     return () => {

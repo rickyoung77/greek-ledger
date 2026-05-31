@@ -27,7 +27,27 @@ export default function CompleteSetup() {
 
   const [mode, setMode]       = useState(null) // 'create' | 'join'
   const [saving, setSaving]   = useState(false)
+  const [retrying, setRetrying] = useState(false)
   const [error, setError]     = useState(null)
+
+  // If the user already has a chapter in the DB but loadProfile failed,
+  // this lets them retry without signing out.
+  async function handleRetry() {
+    setRetrying(true)
+    setError(null)
+    try {
+      await Promise.race([
+        refreshProfile(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
+      ])
+      // If loadProfile found the chapter, chapterId in context is now set and
+      // AppRoutes will automatically redirect to the dashboard.
+    } catch {
+      setError('Could not reach the database. Check your connection and the browser console for details.')
+    } finally {
+      setRetrying(false)
+    }
+  }
 
   const [createForm, setCreateForm] = useState({ chapterName: '', semester: 'Fall 2026', role: 'Treasurer' })
   const [joinForm, setJoinForm]     = useState({ joinCode: '', year: 'Freshman' })
@@ -202,6 +222,11 @@ export default function CompleteSetup() {
           {user?.email && (
             <p className="text-xs text-gray-400 mt-3">Signed in as {user.email}</p>
           )}
+          {user?.id && (
+            <p className="text-xs mt-1" style={{ color: '#9ca3af', fontFamily: 'monospace' }}>
+              uid: {user.id}
+            </p>
+          )}
         </div>
 
         <div className="px-8 py-6 space-y-4">
@@ -214,6 +239,15 @@ export default function CompleteSetup() {
           {/* Mode selector */}
           {!mode && (
             <div className="space-y-3">
+              {/* Retry — for users whose chapter exists but loadProfile failed */}
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="w-full py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-50"
+                style={{ backgroundColor: '#f0fdf4', color: '#15803d', border: '1.5px solid #86efac' }}
+              >
+                {retrying ? 'Checking…' : 'Already set up a chapter? Try loading it →'}
+              </button>
               <button
                 onClick={() => { setMode('create'); setError(null) }}
                 className="w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition hover:border-blue-400"

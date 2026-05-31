@@ -1,7 +1,8 @@
 -- ============================================================
 -- Greek Ledger — Setup Fix Migration
 -- Run this in the Supabase SQL editor if chapter creation is broken.
--- Safe to re-run: all statements use IF NOT EXISTS / DROP IF EXISTS.
+-- Mostly safe to re-run (schema + policy steps use IF NOT EXISTS / DROP IF EXISTS).
+-- EXCEPTION: Step 4 hard-overwrites two specific rows on every run — see the note there.
 -- ============================================================
 
 
@@ -21,8 +22,19 @@ alter table members
 -- ── Step 2: Indexes ───────────────────────────────────────────
 
 create index if not exists idx_chapters_user_id  on chapters (user_id);
-create index if not exists idx_chapters_join_code on chapters (join_code);
 create index if not exists idx_members_user_id   on members  (user_id);
+
+-- join_code must be UNIQUE: the join flow looks a chapter up by code and takes the
+-- first row, so two chapters sharing a code would silently route members to the
+-- wrong chapter. Wrapped in a block so that if the live data already has duplicate
+-- codes, the migration raises a NOTICE instead of aborting every step after it.
+do $$
+begin
+  drop index if exists idx_chapters_join_code;
+  create unique index idx_chapters_join_code on chapters (join_code) where join_code is not null;
+exception when others then
+  raise notice 'Skipped UNIQUE index on chapters.join_code — resolve duplicate join codes first, then re-run. Detail: %', sqlerrm;
+end $$;
 
 
 -- ── Step 3: Fix the members RLS policies ─────────────────────
@@ -34,6 +46,10 @@ create index if not exists idx_members_user_id   on members  (user_id);
 -- The original members_select policy only allowed chapter owners to see
 -- members, creating a catch-22: you can't see your own member record until
 -- you own a chapter.
+
+-- Policies are inert unless RLS is actually enabled — ensure it (idempotent).
+alter table chapters enable row level security;
+alter table members  enable row level security;
 
 drop policy if exists "members_insert" on members;
 drop policy if exists "members_select" on members;
@@ -66,20 +82,26 @@ create policy "members_delete"
   using (chapter_id in (select id from chapters where user_id = auth.uid()));
 
 
--- ── Step 4: Backfill existing rows (one-time, safe to re-run) ────
--- This fixes rows created before user_id columns existed.
--- Without this, ALL loadProfile paths return null for existing users
--- because RLS hides rows where user_id is null.
+-- ── Step 4: Backfill existing rows ────────────────────────────────
+-- IMPORTANT: The user IDs below must match the EXACT uid shown on
+-- the CompleteSetup screen (uid: xxxxx). If the app still shows
+-- CompleteSetup after login, your logged-in user ID may be different
+-- from what's stored — update these values to match the uid on screen.
+--
+-- The AND user_id IS NULL guard is removed so this overwrites any
+-- wrong value that may have been set previously.
+--
+-- These two rows are now confirmed correct in the DB, so the UPDATEs below are
+-- no-ops. Once you're past this bug, delete this entire Step 4 — leaving hard-coded
+-- IDs in a re-runnable migration risks silently clobbering data later.
 
 update chapters
   set user_id = '352f352b-e1f9-414e-b3f4-40a72fec6680'
-  where id     = 'faf704d9-a034-4d5d-9f0a-03d5f9039c76'
-    and user_id is null;
+  where id = 'faf704d9-a034-4d5d-9f0a-03d5f9039c76';
 
 update members
   set user_id = '352f352b-e1f9-414e-b3f4-40a72fec6680'
-  where id     = 'ae25fc5b-71a7-46c0-a19c-54a08cdd09b8'
-    and user_id is null;
+  where id = 'ae25fc5b-71a7-46c0-a19c-54a08cdd09b8';
 
 
 -- ── Verify ───────────────────────────────────────────────────
