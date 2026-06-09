@@ -2,17 +2,18 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import BrandMark from '../components/BrandMark'
 
 const SEMESTERS = ['Spring 2026', 'Fall 2026', 'Spring 2027', 'Fall 2027']
 const ROLES     = ['Treasurer', 'President', 'VP Finance', 'Secretary', 'Social Chair', 'Member']
 const YEARS     = ['Freshman', 'Sophomore', 'Junior', 'Senior', '5th Year']
 
-const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+const inputCls = 'gl-input'
 
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-[13px] font-medium mb-1.5" style={{ color: '#5b677f' }}>{label}</label>
       {children}
     </div>
   )
@@ -134,67 +135,63 @@ export default function CompleteSetup() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ backgroundColor: '#f8f9fa' }}>
-      <div className="flex items-center gap-3 mb-8">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl text-lg font-bold flex-shrink-0" style={{ backgroundColor: '#1e2a4a', color: '#c9a84c' }}>
-          &#9730;
-        </div>
-        <span className="text-xl font-bold tracking-tight" style={{ color: '#1e2a4a' }}>Greek Ledger</span>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ backgroundColor: '#f3efe6' }}>
+      <div className="mb-8 gl-rise"><BrandMark variant="dark" size="md" /></div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-md overflow-hidden">
-        <div className="px-8 pt-8 pb-6 text-center border-b border-gray-100">
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Complete Your Setup</h1>
-          <p className="text-sm text-gray-500">
+      <div className="gl-card rounded-2xl w-full max-w-md overflow-hidden gl-rise" style={{ animationDelay: '0.08s' }}>
+        <div className="px-9 pt-9 pb-6 text-center" style={{ borderBottom: '1px solid #e9e2d3' }}>
+          <p className="gl-eyebrow mb-3" style={{ color: '#b08d4f' }}>Almost there</p>
+          <h1 className="gl-serif mb-2" style={{ fontSize: '1.85rem', fontWeight: 600, color: '#1b2640' }}>Complete Your Setup</h1>
+          <p className="text-sm" style={{ color: '#5b677f' }}>
             One last step — set up your chapter, then you are in.
           </p>
-          {user?.email && <p className="text-xs text-gray-400 mt-3">Signed in as {user.email}</p>}
+          {user?.email && <p className="text-xs mt-3" style={{ color: '#a99f8b' }}>Signed in as {user.email}</p>}
         </div>
 
-        <div className="px-8 py-6 space-y-4">
+        <div className="px-9 py-7 space-y-4">
           {error && (
-            <p className="text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>{error}</p>
+            <p className="text-sm px-4 py-3 rounded-lg" style={{ backgroundColor: '#fbeaea', color: '#9b2c2c', border: '1px solid #f0d2d2' }}>{error}</p>
           )}
 
           {!mode && (
             <div className="space-y-3">
               <button
                 onClick={() => { setMode('create'); setError(null) }}
-                className="w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition hover:border-blue-400"
-                style={{ borderColor: '#e5e7eb' }}
+                className="group w-full flex items-center gap-4 p-4 rounded-xl text-left transition gl-card hover:-translate-y-0.5"
               >
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#eff6ff' }}>
-                  <svg className="w-5 h-5" fill="none" stroke="#3b82f6" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <div className="flex-shrink-0 w-11 h-11 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#1b2640' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="#c4a368" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Create a Chapter</p>
-                  <p className="text-xs text-gray-500 mt-0.5">I am a treasurer or officer setting up our chapter.</p>
+                <div className="flex-1">
+                  <p className="gl-serif" style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1b2640' }}>Create a Chapter</p>
+                  <p className="text-[12.5px] mt-0.5" style={{ color: '#5b677f' }}>I am a treasurer or officer setting up our chapter.</p>
                 </div>
+                <span className="transition group-hover:translate-x-0.5" style={{ color: '#b08d4f' }}>→</span>
               </button>
 
               <button
                 onClick={() => { setMode('join'); setError(null) }}
-                className="w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition hover:border-blue-400"
-                style={{ borderColor: '#e5e7eb' }}
+                className="group w-full flex items-center gap-4 p-4 rounded-xl text-left transition gl-card hover:-translate-y-0.5"
               >
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#f0fdf4' }}>
-                  <svg className="w-5 h-5" fill="none" stroke="#22c55e" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                <div className="flex-shrink-0 w-11 h-11 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#f6efe0', border: '1px solid #e7dcc4' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="#b08d4f" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Join a Chapter</p>
-                  <p className="text-xs text-gray-500 mt-0.5">I have a 6-character join code from my treasurer.</p>
+                <div className="flex-1">
+                  <p className="gl-serif" style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1b2640' }}>Join a Chapter</p>
+                  <p className="text-[12.5px] mt-0.5" style={{ color: '#5b677f' }}>I have a 6-character join code from my treasurer.</p>
                 </div>
+                <span className="transition group-hover:translate-x-0.5" style={{ color: '#b08d4f' }}>→</span>
               </button>
             </div>
           )}
 
           {mode === 'create' && (
             <div className="space-y-4">
-              <Field label={<>Chapter / Organization Name <span className="text-red-400">*</span></>}>
+              <Field label={<>Chapter / Organization Name <span style={{ color: '#b08d4f' }}>*</span></>}>
                 <input type="text" placeholder="Alpha Beta — Epsilon Chapter" value={createForm.chapterName}
                   onChange={(e) => setC('chapterName', e.target.value)} className={inputCls} autoFocus />
               </Field>
@@ -211,10 +208,9 @@ export default function CompleteSetup() {
                 </Field>
               </div>
               <div className="flex gap-3 pt-1">
-                <button onClick={() => { setMode(null); setError(null) }} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition">Back</button>
+                <button onClick={() => { setMode(null); setError(null) }} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition" style={{ color: '#5b677f', border: '1px solid #e3dccd' }}>Back</button>
                 <button onClick={handleCreate} disabled={saving || !createForm.chapterName.trim()}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: '#1e2a4a', color: '#fff' }}>
+                  className="gl-btn-brass flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving && <Spin />}{saving ? 'Creating…' : 'Create Chapter'}
                 </button>
               </div>
@@ -223,11 +219,12 @@ export default function CompleteSetup() {
 
           {mode === 'join' && (
             <div className="space-y-4">
-              <Field label={<>Join Code <span className="text-red-400">*</span></>}>
+              <Field label={<>Join Code <span style={{ color: '#b08d4f' }}>*</span></>}>
                 <input type="text" placeholder="ABC123" maxLength={6} value={joinForm.joinCode}
                   onChange={(e) => setJ('joinCode', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                  className={`${inputCls} font-mono text-center text-lg tracking-widest`} autoFocus />
-                <p className="text-xs text-gray-400 mt-1 text-center">{joinForm.joinCode.length}/6 characters</p>
+                  className={`${inputCls} gl-serif text-center`}
+                  style={{ fontSize: '1.5rem', fontWeight: 600, letterSpacing: '0.4em', paddingLeft: '0.4em' }} autoFocus />
+                <p className="text-xs mt-2 text-center" style={{ color: '#a99f8b' }}>{joinForm.joinCode.length}/6 characters</p>
               </Field>
               <Field label="Your Year">
                 <select value={joinForm.year} onChange={(e) => setJ('year', e.target.value)} className={inputCls}>
@@ -235,10 +232,9 @@ export default function CompleteSetup() {
                 </select>
               </Field>
               <div className="flex gap-3 pt-1">
-                <button onClick={() => { setMode(null); setError(null) }} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition">Back</button>
+                <button onClick={() => { setMode(null); setError(null) }} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition" style={{ color: '#5b677f', border: '1px solid #e3dccd' }}>Back</button>
                 <button onClick={handleJoin} disabled={saving || joinForm.joinCode.length !== 6}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: '#1e2a4a', color: '#fff' }}>
+                  className="gl-btn-brass flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving && <Spin />}{saving ? 'Joining…' : 'Join Chapter'}
                 </button>
               </div>
@@ -246,8 +242,8 @@ export default function CompleteSetup() {
           )}
         </div>
 
-        <div className="px-8 py-4 border-t border-gray-100 text-center">
-          <button onClick={signOut} className="text-xs text-gray-400 hover:text-gray-600 transition">
+        <div className="px-9 py-4 text-center" style={{ borderTop: '1px solid #e9e2d3' }}>
+          <button onClick={signOut} className="text-xs transition hover:opacity-70" style={{ color: '#a99f8b' }}>
             Sign out and use a different account
           </button>
         </div>

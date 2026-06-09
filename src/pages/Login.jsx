@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import AnimatedBackground from '../components/AnimatedBackground'
+import BrandMark from '../components/BrandMark'
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -19,130 +21,121 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#1e2a4a' }}>
-      {/* Left panel — branding */}
-      <div className="hidden lg:flex flex-col justify-between w-[420px] flex-shrink-0 px-12 py-12">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl text-lg font-bold flex-shrink-0" style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>
-            &#9730;
-          </div>
-          <span className="text-xl font-bold tracking-tight" style={{ color: '#c9a84c' }}>Greek Ledger</span>
+    <div className="min-h-screen flex" style={{ backgroundColor: '#f3efe6' }}>
+      {/* Left — navy showpiece panel */}
+      <div className="relative hidden lg:flex flex-col justify-between w-[46%] max-w-[620px] flex-shrink-0 px-14 py-14 overflow-hidden">
+        <AnimatedBackground />
+
+        <div className="relative z-10 gl-rise">
+          <BrandMark variant="light" size="md" />
         </div>
 
-        {/* Tagline */}
-        <div>
-          <h2 className="text-3xl font-bold text-white leading-snug mb-4">
-            Financial clarity<br />for your chapter.
+        <div className="relative z-10 gl-rise" style={{ animationDelay: '0.08s' }}>
+          <p className="gl-eyebrow mb-5" style={{ color: '#c4a368' }}>Chapter Financial Management</p>
+          <h2 className="gl-serif text-white leading-[1.08] mb-6" style={{ fontSize: '3.25rem', fontWeight: 500 }}>
+            Order and clarity<br />for the chapter purse.
           </h2>
-          <p className="text-base" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            Budget tracking, expense approvals, and dues management — all in one place built for fraternities.
+          <p className="text-[15px] leading-relaxed" style={{ color: 'rgba(243,239,230,0.62)', maxWidth: 420 }}>
+            Budgets, expense approvals, and dues — kept with the discipline your
+            chapter&apos;s finances deserve, and handed cleanly to the next treasurer.
           </p>
         </div>
 
-        {/* Decorative stat pills */}
-        <div className="space-y-3">
+        <div className="relative z-10 gl-rise space-y-4" style={{ animationDelay: '0.16s' }}>
+          <div className="gl-rule" style={{ maxWidth: 420 }} />
           {[
-            { label: 'Budget Accounts', value: 'Track every dollar' },
-            { label: 'Expense Approvals', value: 'Approve in one click' },
-            { label: 'Dues Management', value: 'Never miss a payment' },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#c9a84c' }} />
+            ['Modular budgets', 'Every account and sub-account, your way'],
+            ['One-click approvals', 'Officers submit, the treasurer approves'],
+            ['Dues, tracked', 'By class year or member — never chased twice'],
+          ].map(([t, d]) => (
+            <div key={t} className="flex items-baseline gap-4">
+              <span className="gl-serif flex-shrink-0" style={{ color: '#c4a368', fontSize: '1.05rem', width: 14 }}>·</span>
               <div>
-                <p className="text-sm font-semibold text-white">{item.label}</p>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>{item.value}</p>
+                <p className="text-[13.5px] font-semibold" style={{ color: '#f3efe6' }}>{t}</p>
+                <p className="text-[12.5px]" style={{ color: 'rgba(243,239,230,0.45)' }}>{d}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Right panel — form */}
+      {/* Right — sign-in */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="flex lg:hidden items-center gap-3 justify-center mb-8">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl text-lg font-bold" style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>
-              &#9730;
-            </div>
-            <span className="text-xl font-bold" style={{ color: '#c9a84c' }}>Greek Ledger</span>
+        <div className="w-full max-w-[400px] gl-rise" style={{ animationDelay: '0.1s' }}>
+          <div className="flex lg:hidden justify-center mb-10">
+            <BrandMark variant="dark" size="md" />
           </div>
 
-          <div className="bg-white rounded-2xl shadow-2xl px-8 py-10">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-              <p className="text-sm text-gray-500 mt-1">Sign in to your chapter account</p>
+          <div className="mb-9">
+            <p className="gl-eyebrow mb-3" style={{ color: '#b08d4f' }}>Welcome back</p>
+            <h1 className="gl-serif gl-underline" style={{ fontSize: '2.25rem', fontWeight: 600, color: '#1b2640', lineHeight: 1.1 }}>
+              Sign in
+            </h1>
+          </div>
+
+          {error && (
+            <div className="mb-6 px-4 py-3 rounded-lg text-sm" style={{ backgroundColor: '#fbeaea', color: '#9b2c2c', border: '1px solid #f0d2d2' }}>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-[13px] font-medium mb-1.5" style={{ color: '#5b677f' }}>Email address</label>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="treasurer@chapter.org"
+                className="gl-input"
+              />
             </div>
 
-            {error && (
-              <div className="mb-5 px-4 py-3 rounded-lg text-sm font-medium" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
-                {error}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[13px] font-medium" style={{ color: '#5b677f' }}>Password</label>
+                <button type="button" className="text-[12px] font-medium hover:opacity-70 transition" style={{ color: '#b08d4f' }}>
+                  Forgot password?
+                </button>
               </div>
-            )}
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="gl-input"
+              />
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="treasurer@chapter.org"
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition"
-                  style={{ '--tw-ring-color': '#1e2a4a' }}
-                  onFocus={(e) => e.target.style.borderColor = '#1e2a4a'}
-                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-                />
-              </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="gl-btn-navy w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60 mt-1"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Signing in…
+                </span>
+              ) : 'Sign In'}
+            </button>
+          </form>
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-medium text-gray-700">Password</label>
-                  <button type="button" className="text-xs font-medium hover:opacity-70 transition" style={{ color: '#1e2a4a' }}>
-                    Forgot password?
-                  </button>
-                </div>
-                <input
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition"
-                  onFocus={(e) => e.target.style.borderColor = '#1e2a4a'}
-                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-                />
-              </div>
+          <div className="gl-rule my-8" />
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-60 mt-2"
-                style={{ backgroundColor: '#1e2a4a', color: '#fff' }}
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Signing in…
-                  </span>
-                ) : 'Sign In'}
-              </button>
-            </form>
-
-            <p className="mt-6 text-center text-sm text-gray-500">
-              Don&apos;t have an account?{' '}
-              <Link to="/signup" className="font-semibold hover:opacity-80 transition" style={{ color: '#1e2a4a' }}>
-                Create one →
-              </Link>
-            </p>
-          </div>
+          <p className="text-center text-sm" style={{ color: '#5b677f' }}>
+            Don&apos;t have an account?{' '}
+            <Link to="/signup" className="font-semibold hover:opacity-80 transition" style={{ color: '#b08d4f' }}>
+              Create one →
+            </Link>
+          </p>
         </div>
       </div>
     </div>

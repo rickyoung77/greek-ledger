@@ -156,7 +156,7 @@ export default function Expenses() {
             <div className="w-2 self-stretch rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
             <div>
               <p className="text-sm text-gray-500">{s.label}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-0.5">{s.value}</p>
+              <p className="gl-serif text-3xl font-semibold text-gray-900 mt-0.5">{s.value}</p>
             </div>
           </div>
         ))}
@@ -183,7 +183,7 @@ export default function Expenses() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button onClick={() => { setCategory('All Categories'); setStatus('All Statuses'); setMember('All Members'); setDateFrom(''); setDateTo('') }} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition">Clear</button>
-          <button onClick={openModal} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>+ Submit Expense</button>
+          <button onClick={openModal} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>+ Submit Expense</button>
         </div>
       </div>
 
@@ -195,7 +195,7 @@ export default function Expenses() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100" style={{ backgroundColor: '#f8f9fa' }}>
+              <tr className="border-b border-gray-100" style={{ backgroundColor: '#faf8f3' }}>
                 {['Date', 'Category', 'Description', 'Amount', 'Submitted By', 'Status', 'Actions'].map((h) => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
@@ -251,7 +251,7 @@ export default function Expenses() {
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Submit Expense</h3>
+              <h3 className="gl-serif text-xl font-semibold text-gray-900">Submit Expense</h3>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -325,7 +325,7 @@ export default function Expenses() {
                 onClick={handleSubmit}
                 disabled={modalSaving || !form.amount || !form.description.trim()}
                 className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-                style={{ backgroundColor: '#1e2a4a', color: '#fff' }}
+                style={{ backgroundColor: '#1b2640', color: '#fff' }}
               >
                 {modalSaving && (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

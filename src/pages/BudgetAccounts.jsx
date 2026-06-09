@@ -27,7 +27,7 @@ function ModalShell({ title, onClose, onSave, saving, error, disabled, children 
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <h3 className="gl-serif text-xl font-semibold text-gray-900">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -46,7 +46,7 @@ function ModalShell({ title, onClose, onSave, saving, error, disabled, children 
             onClick={onSave}
             disabled={saving || disabled}
             className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-            style={{ backgroundColor: '#1e2a4a', color: '#fff' }}
+            style={{ backgroundColor: '#1b2640', color: '#fff' }}
           >
             {saving && (
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -125,7 +125,7 @@ export default function BudgetAccounts() {
 
       const structured = topLevel.map((top) => ({
         ...top,
-        bg: COLOR_BG[top.color] ?? '#f8f9fa',
+        bg: COLOR_BG[top.color] ?? '#faf8f3',
         subAccounts: subLevel
           .filter((s) => s.parent_id === top.id)
           .map((s) => ({ ...s, spent: spentMap[s.id] || 0 })),
@@ -254,7 +254,7 @@ export default function BudgetAccounts() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">Manage chapter budget accounts and sub-categories</p>
-        <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>
+        <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
           + Create Account
         </button>
       </div>
@@ -272,7 +272,7 @@ export default function BudgetAccounts() {
               return (
                 <div key={acc.id} className="bg-white rounded-xl shadow-sm p-4" style={{ borderLeft: `4px solid ${acc.color}` }}>
                   <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: acc.color }}>{acc.name}</p>
-                  <p className="text-2xl font-bold text-gray-900">${spent.toLocaleString()}</p>
+                  <p className="gl-serif text-3xl font-semibold text-gray-900">${spent.toLocaleString()}</p>
                   <p className="text-xs text-gray-400 mb-2">of ${Number(acc.total_budget).toLocaleString()}</p>
                   <ProgressBar pct={pct} color={acc.color} />
                   <p className="text-xs text-gray-400 mt-1">{pct}% used</p>
@@ -296,7 +296,7 @@ export default function BudgetAccounts() {
                         {acc.name[0]}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-base font-semibold text-gray-900">{acc.name}</p>
+                        <p className="gl-serif text-lg font-semibold text-gray-900">{acc.name}</p>
                         <p className="text-sm text-gray-500">${totalSpent.toLocaleString()} spent · ${remaining.toLocaleString()} remaining</p>
                       </div>
                     </div>

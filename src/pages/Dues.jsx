@@ -47,7 +47,7 @@ function CollectionCard({ col, stats, selected, onSelect }) {
     <button
       onClick={() => onSelect(col.id)}
       className="w-full text-left bg-white rounded-xl shadow-sm p-5 transition hover:shadow-md"
-      style={{ border: `2px solid ${selected ? '#c9a84c' : '#e5e7eb'}` }}
+      style={{ border: `2px solid ${selected ? '#b08d4f' : '#e5e7eb'}` }}
     >
       <div className="flex items-start justify-between gap-2 mb-4">
         <p className="text-sm font-semibold text-gray-900 leading-snug">{col.name}</p>
@@ -247,7 +247,7 @@ export default function Dues() {
   const unpaidCount = filteredDues.filter(d => d.status !== 'paid').length
 
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none transition'
-  const fs = { onFocus: (e) => { e.target.style.borderColor = '#1e2a4a' }, onBlur: (e) => { e.target.style.borderColor = '#e5e7eb' } }
+  const fs = { onFocus: (e) => { e.target.style.borderColor = '#1b2640' }, onBlur: (e) => { e.target.style.borderColor = '#e5e7eb' } }
 
   if (loading) return <Spinner />
   if (error)   return <p className="text-sm text-red-500 py-10 text-center">{error}</p>
@@ -259,7 +259,7 @@ export default function Dues() {
         <p className="text-sm text-gray-500">
           {activeCount > 0 ? `${activeCount} active collection${activeCount !== 1 ? 's' : ''}` : 'No active collections'}
         </p>
-        <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>
+        <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
           + Create Dues Collection
         </button>
       </div>
@@ -272,7 +272,7 @@ export default function Dues() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
-          <h3 className="text-base font-semibold text-gray-900 mb-1">No dues collections yet</h3>
+          <h3 className="gl-serif text-lg font-semibold text-gray-900 mb-1">No dues collections yet</h3>
           <p className="text-sm text-gray-500">Create your first collection to start tracking member payments.</p>
         </div>
       ) : (
@@ -289,7 +289,7 @@ export default function Dues() {
           {/* Table header */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-base font-semibold text-gray-900">{selectedCollection.name}</h2>
+              <h2 className="gl-serif text-lg font-semibold text-gray-900">{selectedCollection.name}</h2>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                 style={selectedCollection.status === 'active' ? { backgroundColor: '#dcfce7', color: '#15803d' } : { backgroundColor: '#f3f4f6', color: '#6b7280' }}>
                 {selectedCollection.status === 'active' ? 'Active' : 'Closed'}
@@ -310,7 +310,7 @@ export default function Dues() {
               )}
               <button onClick={sendAllReminders} disabled={sendingAll || unpaidCount === 0}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-90 disabled:opacity-40"
-                style={{ backgroundColor: '#1e2a4a', color: '#fff' }}>
+                style={{ backgroundColor: '#1b2640', color: '#fff' }}>
                 {sendingAll ? 'Sending…' : `Send All Reminders (${unpaidCount})`}
               </button>
             </div>
@@ -339,7 +339,7 @@ export default function Dues() {
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100" style={{ backgroundColor: '#f8f9fa' }}>
+                  <tr className="border-b border-gray-100" style={{ backgroundColor: '#faf8f3' }}>
                     {['Member', 'Year', 'Amount Owed', 'Status', 'Last Reminder', 'Actions'].map(h => (
                       <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
@@ -373,7 +373,7 @@ export default function Dues() {
                             )}
                             <button onClick={() => sendReminder(d)} disabled={remindingId === d.id}
                               className="text-xs font-semibold transition hover:opacity-70 disabled:opacity-40"
-                              style={{ color: '#1e2a4a' }}>
+                              style={{ color: '#1b2640' }}>
                               {remindingId === d.id ? '…' : 'Remind'}
                             </button>
                           </div>
@@ -395,7 +395,7 @@ export default function Dues() {
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 flex-shrink-0">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="gl-serif text-xl font-semibold text-gray-900">
                   {createStep === 'form' ? 'Create Dues Collection' : 'Preview & Confirm'}
                 </h3>
                 {createStep === 'preview' && (
@@ -445,7 +445,7 @@ export default function Dues() {
                         <button key={m} onClick={() => setForm(p => ({ ...p, mode: m }))}
                           className="flex-1 py-2 text-sm font-medium transition"
                           style={{
-                            backgroundColor: form.mode === m ? '#1e2a4a' : '#fff',
+                            backgroundColor: form.mode === m ? '#1b2640' : '#fff',
                             color: form.mode === m ? '#fff' : '#6b7280',
                             borderRight: i === 0 ? '1px solid #e5e7eb' : 'none',
                           }}>
@@ -486,7 +486,7 @@ export default function Dues() {
                       <div className="border border-gray-200 rounded-lg overflow-hidden">
                         <table className="w-full">
                           <thead>
-                            <tr style={{ backgroundColor: '#f8f9fa' }}>
+                            <tr style={{ backgroundColor: '#faf8f3' }}>
                               <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Member</th>
                               <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Year</th>
                               <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
@@ -520,7 +520,7 @@ export default function Dues() {
                   {createErr && (
                     <p className="text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>{createErr}</p>
                   )}
-                  <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: '#f8f9fa' }}>
+                  <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: '#faf8f3' }}>
                     {[['Collection', form.name], ['Due Date', fmtDate(form.dueDate)], ['Payment Link', form.paymentLink || null]].filter(([, v]) => v && v !== '—').map(([k, v]) => (
                       <div key={k} className="flex justify-between text-sm">
                         <span className="text-gray-500">{k}</span>
@@ -532,7 +532,7 @@ export default function Dues() {
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full">
                       <thead>
-                        <tr style={{ backgroundColor: '#f8f9fa' }}>
+                        <tr style={{ backgroundColor: '#faf8f3' }}>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Member</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Year</th>
                           <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
@@ -551,11 +551,11 @@ export default function Dues() {
                         )}
                       </tbody>
                       <tfoot>
-                        <tr className="border-t-2 border-gray-200" style={{ backgroundColor: '#f8f9fa' }}>
+                        <tr className="border-t-2 border-gray-200" style={{ backgroundColor: '#faf8f3' }}>
                           <td className="px-4 py-2.5 text-sm font-semibold text-gray-900" colSpan={2}>
                             Total ({previewRows.filter(r => r.amount > 0).length} members)
                           </td>
-                          <td className="px-4 py-2.5 text-sm font-bold text-right" style={{ color: '#1e2a4a' }}>{fmtMoney(previewTotal)}</td>
+                          <td className="px-4 py-2.5 text-sm font-bold text-right" style={{ color: '#1b2640' }}>{fmtMoney(previewTotal)}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -571,7 +571,7 @@ export default function Dues() {
                   <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition">Cancel</button>
                   <button onClick={() => canPreview && setCreateStep('preview')} disabled={!canPreview || loadingMembers}
                     className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
-                    style={{ backgroundColor: '#1e2a4a', color: '#fff' }}>
+                    style={{ backgroundColor: '#1b2640', color: '#fff' }}>
                     Preview Summary →
                   </button>
                 </>
@@ -580,7 +580,7 @@ export default function Dues() {
                   <button onClick={() => setCreateStep('form')} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition">← Back</button>
                   <button onClick={saveCollection} disabled={saving || previewRows.filter(r => r.amount > 0).length === 0}
                     className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-                    style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>
+                    style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
                     {saving && <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>}
                     {saving ? 'Creating…' : 'Create Collection'}
                   </button>

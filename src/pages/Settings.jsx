@@ -39,7 +39,7 @@ export default function Settings() {
       {isAdmin ? (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">Chapter Join Code</h2>
+            <h2 className="gl-serif text-xl font-semibold text-gray-900">Chapter Join Code</h2>
             <p className="text-sm text-gray-500 mt-0.5">
               Share this code with members so they can sign up and join your chapter automatically.
             </p>
@@ -50,7 +50,7 @@ export default function Settings() {
             )}
 
             <div className="flex items-center gap-5">
-              <div className="flex-1 rounded-xl border-2 px-6 py-5 text-center" style={{ borderColor: '#e5e7eb', backgroundColor: '#f8f9fa' }}>
+              <div className="flex-1 rounded-xl border-2 px-6 py-5 text-center" style={{ borderColor: '#e5e7eb', backgroundColor: '#faf8f3' }}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Join Code</p>
                 <p className="font-mono font-bold text-gray-900" style={{ fontSize: '2.5rem', letterSpacing: '0.3em' }}>
                   {code || '——'}
@@ -109,7 +109,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="mt-5 p-4 rounded-lg" style={{ backgroundColor: '#fffbeb', borderLeft: '3px solid #c9a84c' }}>
+            <div className="mt-5 p-4 rounded-lg" style={{ backgroundColor: '#fffbeb', borderLeft: '3px solid #b08d4f' }}>
               <p className="text-xs text-amber-800">
                 <span className="font-semibold">How it works:</span> Members go to the signup page, choose &quot;Join a Chapter&quot;, and enter this code. They&apos;ll be added to your chapter immediately.
               </p>
@@ -135,7 +135,7 @@ export default function Settings() {
       {/* Chapter info — visible to everyone */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Chapter Info</h2>
+          <h2 className="gl-serif text-xl font-semibold text-gray-900">Chapter Info</h2>
         </div>
         <div className="divide-y divide-gray-50">
           <div className="flex items-center justify-between px-6 py-4">

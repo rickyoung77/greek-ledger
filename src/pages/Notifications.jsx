@@ -82,7 +82,7 @@ export default function Notifications() {
           onClick={markAllRead}
           disabled={unreadCount === 0}
           className="text-sm font-semibold transition hover:opacity-70 disabled:opacity-40"
-          style={{ color: '#1e2a4a' }}
+          style={{ color: '#1b2640' }}
         >
           Mark all as read
         </button>

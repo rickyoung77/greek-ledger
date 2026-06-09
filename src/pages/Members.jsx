@@ -24,7 +24,7 @@ function Modal({ title, onClose, onSave, saving, error, disabled, children }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <h3 className="gl-serif text-xl font-semibold text-gray-900">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -43,7 +43,7 @@ function Modal({ title, onClose, onSave, saving, error, disabled, children }) {
             onClick={onSave}
             disabled={saving || disabled}
             className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-            style={{ backgroundColor: '#1e2a4a', color: '#fff' }}
+            style={{ backgroundColor: '#1b2640', color: '#fff' }}
           >
             {saving && (
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -170,7 +170,7 @@ export default function Members() {
         <button
           onClick={openModal}
           className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90"
-          style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}
+          style={{ backgroundColor: '#b08d4f', color: '#fff' }}
         >
           + Add Member
         </button>
@@ -182,7 +182,7 @@ export default function Members() {
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100" style={{ backgroundColor: '#f8f9fa' }}>
+              <tr className="border-b border-gray-100" style={{ backgroundColor: '#faf8f3' }}>
                 {['Member', 'Role', 'Year', 'Email', 'Dues Status', 'Actions'].map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
@@ -210,7 +210,7 @@ export default function Members() {
                           onChange={(e) => updateYear(m.id, e.target.value)}
                           onBlur={() => setEditingYearId(null)}
                           className="border rounded px-2 py-1 text-sm focus:outline-none"
-                          style={{ borderColor: '#1e2a4a' }}
+                          style={{ borderColor: '#1b2640' }}
                         >
                           {YEARS.map((y) => <option key={y}>{y}</option>)}
                         </select>

@@ -1,3 +1,178 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   Greek Ledger — "Refined Finance" visual language
+   Cream · Navy · Brass.  Serif headings, hairline rules,
+   whisper-quiet motion.  All scoped to gl-* classes.
+   ============================================================ */
+
+:root {
+  --gl-cream: #f3efe6;
+  --gl-cream-50: #faf8f3;
+  --gl-navy: #1b2640;
+  --gl-navy-deep: #141d33;
+  --gl-brass: #b08d4f;
+  --gl-brass-light: #c4a368;
+}
+
+body {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  background-color: var(--gl-cream);
+  color: var(--gl-navy);
+  -webkit-font-smoothing: antialiased;
+}
+
+.gl-serif { font-family: "Cormorant Garamond", Georgia, serif; }
+
+/* tracking for small all-caps labels (the 'engraved' look) */
+.gl-eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* ── Navy showpiece panel textures ──────────────────────────── */
+
+/* fine vertical pinstripe (Peter Millar fabric cue) */
+.gl-pinstripe {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.035) 0px,
+    rgba(255, 255, 255, 0.035) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+}
+
+/* soft top-down sheen + subtle brass aura, layered on navy.
+   NOTE: intentionally does NOT set `position` — consumers that need a
+   positioning context (sidebar, loading screen) add `relative` themselves,
+   while AnimatedBackground needs to stay `absolute inset-0` to fill its parent. */
+.gl-navy-panel {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(176, 141, 79, 0.16), transparent 60%),
+    linear-gradient(180deg, #2a3656 0%, var(--gl-navy) 42%, var(--gl-navy-deep) 100%);
+  background-color: var(--gl-navy);
+}
+
+/* slow, single light sweep across the panel */
+@keyframes gl-sheen {
+  0%   { transform: translateX(-130%) skewX(-12deg); opacity: 0; }
+  12%  { opacity: 0.35; }
+  30%  { transform: translateX(130%) skewX(-12deg); opacity: 0; }
+  100% { transform: translateX(130%) skewX(-12deg); opacity: 0; }
+}
+.gl-sheen {
+  position: absolute;
+  top: 0; left: 0;
+  width: 35%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: gl-sheen 14s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* faint gold motes drifting upward */
+@keyframes gl-drift {
+  0%   { transform: translateY(0); opacity: 0; }
+  15%  { opacity: 0.8; }
+  85%  { opacity: 0.5; }
+  100% { transform: translateY(-160px); opacity: 0; }
+}
+.gl-mote {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 9999px;
+  background: var(--gl-brass-light);
+  box-shadow: 0 0 6px 1px rgba(196, 163, 104, 0.6);
+  animation: gl-drift 16s linear infinite;
+  pointer-events: none;
+}
+
+/* large monogram watermark */
+.gl-monogram {
+  position: absolute;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600;
+  color: rgba(196, 163, 104, 0.07);
+  user-select: none;
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* ── Cards & rules ──────────────────────────────────────────── */
+.gl-card {
+  background: #ffffff;
+  border: 1px solid var(--gl-cream-200, #e9e2d3);
+  box-shadow:
+    0 1px 2px rgba(27, 38, 64, 0.04),
+    0 18px 50px -28px rgba(27, 38, 64, 0.30);
+}
+
+/* hairline divider with a centered brass tick */
+.gl-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(176, 141, 79, 0.4), transparent);
+}
+
+/* thin brass underline accent for headings */
+.gl-underline::after {
+  content: "";
+  display: block;
+  width: 38px; height: 2px;
+  margin-top: 10px;
+  background: var(--gl-brass);
+}
+
+/* inputs — quiet, with a brass focus */
+.gl-input {
+  width: 100%;
+  background: var(--gl-cream-50);
+  border: 1px solid #e3dccd;
+  border-radius: 8px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--gl-navy);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.gl-input::placeholder { color: #a99f8b; }
+.gl-input:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--gl-brass);
+  box-shadow: 0 0 0 3px rgba(176, 141, 79, 0.14);
+}
+
+/* primary brass button */
+.gl-btn-brass {
+  background: linear-gradient(180deg, var(--gl-brass-light), var(--gl-brass));
+  color: #fff;
+  border: 1px solid var(--gl-brass-dark, #8f7039);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: filter 0.18s ease, transform 0.05s ease;
+}
+.gl-btn-brass:hover { filter: brightness(1.05); }
+.gl-btn-brass:active { transform: translateY(1px); }
+
+/* navy/outline button */
+.gl-btn-navy {
+  background: var(--gl-navy);
+  color: var(--gl-cream-50);
+  transition: filter 0.18s ease, transform 0.05s ease;
+}
+.gl-btn-navy:hover { filter: brightness(1.12); }
+.gl-btn-navy:active { transform: translateY(1px); }
+
+/* ── Quiet entrance ─────────────────────────────────────────── */
+@keyframes gl-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.gl-rise { animation: gl-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Respect reduced motion ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .gl-sheen, .gl-mote, .gl-rise { animation: none !important; }
+}

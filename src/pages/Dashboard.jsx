@@ -150,7 +150,7 @@ export default function Dashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">{card.label}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{displayValue(card)}</p>
+                <p className="gl-serif text-4xl font-semibold text-gray-900 mt-1">{displayValue(card)}</p>
               </div>
               <div className="p-2.5 rounded-xl flex-shrink-0" style={{ backgroundColor: card.bg, color: card.color }}>
                 {card.icon}
@@ -162,7 +162,7 @@ export default function Dashboard() {
 
       {/* Budget Overview */}
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-5">Budget Overview</h2>
+        <h2 className="gl-serif text-lg font-semibold text-gray-900 mb-5">Budget Overview</h2>
         {overview.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-6">No budget accounts yet. Create one in Budget Accounts.</p>
         ) : (
@@ -191,15 +191,15 @@ export default function Dashboard() {
       {/* Quick Actions + Recent Expenses */}
       <div className="bg-white rounded-xl shadow-sm">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Recent Expenses</h2>
+          <h2 className="gl-serif text-lg font-semibold text-gray-900">Recent Expenses</h2>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}>
+            <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
               + Add Expense
             </button>
-            <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1e2a4a', color: '#1e2a4a' }}>
+            <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
               Send Dues Reminder
             </button>
-            <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1e2a4a', color: '#1e2a4a' }}>
+            <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
               Generate Report
             </button>
           </div>
@@ -208,7 +208,7 @@ export default function Dashboard() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100" style={{ backgroundColor: '#f8f9fa' }}>
+              <tr className="border-b border-gray-100" style={{ backgroundColor: '#faf8f3' }}>
                 {['Date', 'Category', 'Description', 'Amount', 'Submitted By', 'Status'].map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
@@ -237,7 +237,7 @@ export default function Dashboard() {
         </div>
 
         <div className="px-6 py-4 flex justify-end border-t border-gray-100">
-          <button onClick={() => navigate('/expenses')} className="text-sm font-semibold transition hover:opacity-80" style={{ color: '#1e2a4a' }}>
+          <button onClick={() => navigate('/expenses')} className="text-sm font-semibold transition hover:opacity-80" style={{ color: '#1b2640' }}>
             View All Expenses →
           </button>
         </div>
@@ -248,7 +248,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Submit New Expense</h3>
+              <h3 className="gl-serif text-xl font-semibold text-gray-900">Submit New Expense</h3>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
@@ -275,7 +275,7 @@ export default function Dashboard() {
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition">Cancel</button>
-              <button onClick={handleSubmit} className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#1e2a4a', color: '#fff' }}>Submit Expense</button>
+              <button onClick={handleSubmit} className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#1b2640', color: '#fff' }}>Submit Expense</button>
             </div>
           </div>
         </div>

@@ -27,20 +27,21 @@ function AppRoutes() {
 
   if (loading && !loadingTimedOut) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-5" style={{ backgroundColor: '#1e2a4a' }}>
-        <div className="flex items-center gap-3">
+      <div className="gl-navy-panel h-screen flex flex-col items-center justify-center gap-6 relative">
+        <div className="gl-pinstripe absolute inset-0 pointer-events-none" />
+        <div className="relative z-10 flex flex-col items-center gap-6">
           <div
-            className="flex items-center justify-center w-10 h-10 rounded-xl text-lg font-bold"
-            style={{ backgroundColor: '#c9a84c', color: '#1e2a4a' }}
+            className="flex items-center justify-center rounded-lg gl-serif"
+            style={{ width: 52, height: 52, border: '1px solid rgba(196,163,104,0.55)', background: 'linear-gradient(180deg, rgba(176,141,79,0.18), rgba(176,141,79,0.04))', color: '#b08d4f', fontSize: 26, fontWeight: 600 }}
           >
-            &#9730;
+            GL
           </div>
-          <span className="text-xl font-bold tracking-tight" style={{ color: '#c9a84c' }}>Greek Ledger</span>
+          <span className="gl-serif" style={{ color: '#f3efe6', fontSize: '1.5rem', fontWeight: 600 }}>Greek Ledger</span>
+          <div
+            className="w-6 h-6 rounded-full border-2 animate-spin"
+            style={{ borderColor: 'rgba(196,163,104,0.2)', borderTopColor: '#b08d4f' }}
+          />
         </div>
-        <div
-          className="w-7 h-7 rounded-full border-4 animate-spin"
-          style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: '#c9a84c' }}
-        />
       </div>
     )
   }
