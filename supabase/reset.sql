@@ -22,10 +22,12 @@ drop table if exists members           cascade;
 drop table if exists chapters          cascade;
 
 -- Functions defined by the clean schema
-drop function if exists public.user_belongs_to_chapter(uuid) cascade;
-drop function if exists public.lookup_join_code(text)        cascade;
-drop function if exists public.regenerate_join_code(uuid)    cascade;
-drop function if exists public.gen_join_code()               cascade;
+drop function if exists public.user_belongs_to_chapter(uuid)  cascade;
+drop function if exists public.user_is_chapter_admin(uuid)    cascade;
+drop function if exists public.user_can_submit_expenses(uuid) cascade;
+drop function if exists public.lookup_join_code(text)         cascade;
+drop function if exists public.regenerate_join_code(uuid)     cascade;
+drop function if exists public.gen_join_code()                cascade;
 
 -- Drifted helper functions from earlier attempts (the recursion culprits).
 -- Safe no-ops if they don't exist.

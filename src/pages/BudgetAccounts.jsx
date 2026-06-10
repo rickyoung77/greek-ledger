@@ -63,7 +63,7 @@ function ModalShell({ title, onClose, onSave, saving, error, disabled, children 
 }
 
 export default function BudgetAccounts() {
-  const { chapterId, loading: authLoading } = useAuth()
+  const { chapterId, isAdmin, loading: authLoading } = useAuth()
   const [accounts, setAccounts] = useState([])
   const [expanded, setExpanded] = useState({})
   const [loading, setLoading]   = useState(true)
@@ -253,10 +253,12 @@ export default function BudgetAccounts() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">Manage chapter budget accounts and sub-categories</p>
-        <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
-          + Create Account
-        </button>
+        <p className="text-sm text-gray-500">{isAdmin ? 'Manage chapter budget accounts and sub-categories' : 'Chapter budget accounts and sub-categories'}</p>
+        {isAdmin && (
+          <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
+            + Create Account
+          </button>
+        )}
       </div>
 
       {accounts.length === 0 ? (
@@ -340,22 +342,30 @@ export default function BudgetAccounts() {
                                 ${sub.spent.toLocaleString()}<span className="text-gray-300"> / </span>${Number(sub.total_budget).toLocaleString()}
                               </span>
                               <div className="flex items-center gap-2 justify-end">
-                                <button onClick={() => openEdit(sub)} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80" style={{ backgroundColor: '#eff6ff', color: '#3b82f6' }}>
-                                  Edit
-                                </button>
-                                <button onClick={() => deleteSubAccount(sub.id)} disabled={deletingId === sub.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
-                                  {deletingId === sub.id ? '…' : 'Delete'}
-                                </button>
+                                {isAdmin ? (
+                                  <>
+                                    <button onClick={() => openEdit(sub)} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80" style={{ backgroundColor: '#eff6ff', color: '#3b82f6' }}>
+                                      Edit
+                                    </button>
+                                    <button onClick={() => deleteSubAccount(sub.id)} disabled={deletingId === sub.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
+                                      {deletingId === sub.id ? '…' : 'Delete'}
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-gray-300">—</span>
+                                )}
                               </div>
                             </div>
                           )
                         })}
                       </div>
-                      <div className="px-6 py-3 border-t border-gray-100 flex justify-end">
-                        <button onClick={() => openSub(acc)} className="text-sm font-semibold transition hover:opacity-80" style={{ color: acc.color }}>
-                          + Add Sub-Account
-                        </button>
-                      </div>
+                      {isAdmin && (
+                        <div className="px-6 py-3 border-t border-gray-100 flex justify-end">
+                          <button onClick={() => openSub(acc)} className="text-sm font-semibold transition hover:opacity-80" style={{ color: acc.color }}>
+                            + Add Sub-Account
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

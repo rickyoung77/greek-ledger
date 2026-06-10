@@ -71,7 +71,7 @@ function CollectionCard({ col, stats, selected, onSelect }) {
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function Dues() {
-  const { chapterId, loading: authLoading } = useAuth()
+  const { chapterId, isAdmin, loading: authLoading } = useAuth()
 
   // Data
   const [collections, setCollections] = useState([])
@@ -259,9 +259,11 @@ export default function Dues() {
         <p className="text-sm text-gray-500">
           {activeCount > 0 ? `${activeCount} active collection${activeCount !== 1 ? 's' : ''}` : 'No active collections'}
         </p>
-        <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
-          + Create Dues Collection
-        </button>
+        {isAdmin && (
+          <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
+            + Create Dues Collection
+          </button>
+        )}
       </div>
 
       {/* Collections grid */}
@@ -300,20 +302,22 @@ export default function Dues() {
                 </a>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              {selectedCollection.status === 'active' && (
-                <button onClick={() => closeCollection(selectedCollection.id)} disabled={closingId === selectedCollection.id}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}>
-                  {closingId === selectedCollection.id ? '…' : 'Close Collection'}
+            {isAdmin && (
+              <div className="flex items-center gap-2">
+                {selectedCollection.status === 'active' && (
+                  <button onClick={() => closeCollection(selectedCollection.id)} disabled={closingId === selectedCollection.id}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-80 disabled:opacity-50"
+                    style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}>
+                    {closingId === selectedCollection.id ? '…' : 'Close Collection'}
+                  </button>
+                )}
+                <button onClick={sendAllReminders} disabled={sendingAll || unpaidCount === 0}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-90 disabled:opacity-40"
+                  style={{ backgroundColor: '#1b2640', color: '#fff' }}>
+                  {sendingAll ? 'Sending…' : `Send All Reminders (${unpaidCount})`}
                 </button>
-              )}
-              <button onClick={sendAllReminders} disabled={sendingAll || unpaidCount === 0}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-90 disabled:opacity-40"
-                style={{ backgroundColor: '#1b2640', color: '#fff' }}>
-                {sendingAll ? 'Sending…' : `Send All Reminders (${unpaidCount})`}
-              </button>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Filters */}
@@ -340,7 +344,7 @@ export default function Dues() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100" style={{ backgroundColor: '#faf8f3' }}>
-                    {['Member', 'Year', 'Amount Owed', 'Status', 'Last Reminder', 'Actions'].map(h => (
+                    {['Member', 'Year', 'Amount Owed', 'Status', 'Last Reminder', ...(isAdmin ? ['Actions'] : [])].map(h => (
                       <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -362,22 +366,24 @@ export default function Dues() {
                             style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
                         </td>
                         <td className="px-5 py-3.5 text-xs text-gray-500">{fmtAgo(d.last_reminder_sent)}</td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            {d.status !== 'paid' && (
-                              <button onClick={() => markPaid(d.id)} disabled={markingId === d.id}
+                        {isAdmin && (
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-3">
+                              {d.status !== 'paid' && (
+                                <button onClick={() => markPaid(d.id)} disabled={markingId === d.id}
+                                  className="text-xs font-semibold transition hover:opacity-70 disabled:opacity-40"
+                                  style={{ color: '#15803d' }}>
+                                  {markingId === d.id ? '…' : 'Mark Paid'}
+                                </button>
+                              )}
+                              <button onClick={() => sendReminder(d)} disabled={remindingId === d.id}
                                 className="text-xs font-semibold transition hover:opacity-70 disabled:opacity-40"
-                                style={{ color: '#15803d' }}>
-                                {markingId === d.id ? '…' : 'Mark Paid'}
+                                style={{ color: '#1b2640' }}>
+                                {remindingId === d.id ? '…' : 'Remind'}
                               </button>
-                            )}
-                            <button onClick={() => sendReminder(d)} disabled={remindingId === d.id}
-                              className="text-xs font-semibold transition hover:opacity-70 disabled:opacity-40"
-                              style={{ color: '#1b2640' }}>
-                              {remindingId === d.id ? '…' : 'Remind'}
-                            </button>
-                          </div>
-                        </td>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     )
                   })}

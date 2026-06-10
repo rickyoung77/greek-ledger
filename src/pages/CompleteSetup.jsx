@@ -2,11 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { ROLES, CLASS_YEARS as YEARS } from '../lib/roles'
 import BrandMark from '../components/BrandMark'
 
 const SEMESTERS = ['Spring 2026', 'Fall 2026', 'Spring 2027', 'Fall 2027']
-const ROLES     = ['Treasurer', 'President', 'VP Finance', 'Secretary', 'Social Chair', 'Member']
-const YEARS     = ['Freshman', 'Sophomore', 'Junior', 'Senior', '5th Year']
 
 const inputCls = 'gl-input'
 

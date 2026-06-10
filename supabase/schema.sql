@@ -47,9 +47,15 @@ create table if not exists members (
   year        text,
   dues_status text not null default 'Pending' check (dues_status in ('Paid', 'Pending')),
   email       text,
+  -- When true, a non-admin member may submit expenses (always forced to
+  -- Pending). Admins (creator / Treasurer / President) can submit regardless.
+  can_submit_expenses boolean not null default false,
   created_at  timestamptz not null default now(),
   unique (user_id)   -- one membership per signed-up user (multiple NULLs allowed)
 );
+
+-- Idempotent add for databases created before this column existed.
+alter table members add column if not exists can_submit_expenses boolean not null default false;
 
 -- ── budget_accounts ─────────────────────────────────────────
 -- parent_id null => top-level account; set => sub-account.
@@ -173,6 +179,50 @@ as $$
   );
 $$;
 
+-- user_is_chapter_admin(cid) — TRUE if the current user has full management
+-- rights over chapter cid: they CREATED the chapter, OR their member role is
+-- an admin role (Treasurer / President). SECURITY DEFINER to bypass RLS.
+-- NOTE: the admin role list here must match src/lib/roles.js ADMIN_ROLES.
+create or replace function public.user_is_chapter_admin(cid uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    exists (
+      select 1 from public.chapters c
+      where c.id = cid and c.created_by = auth.uid()
+    )
+    or exists (
+      select 1 from public.members m
+      where m.chapter_id = cid
+        and m.user_id = auth.uid()
+        and m.role in ('Treasurer', 'President')
+    );
+$$;
+
+-- user_can_submit_expenses(cid) — TRUE if the current user may create expenses
+-- in chapter cid: either they are an admin, or an admin has granted them the
+-- can_submit_expenses flag. Used by the expenses INSERT policy.
+create or replace function public.user_can_submit_expenses(cid uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    public.user_is_chapter_admin(cid)
+    or exists (
+      select 1 from public.members m
+      where m.chapter_id = cid
+        and m.user_id = auth.uid()
+        and m.can_submit_expenses = true
+    );
+$$;
+
 -- lookup_join_code(code) — resolve a join code to a chapter. SECURITY DEFINER
 -- so a not-yet-member (even an anonymous signup form) can validate a code
 -- without being able to read the chapters table directly.
@@ -226,6 +276,13 @@ alter table dues_collections enable row level security;
 alter table dues_tiers       enable row level security;
 alter table member_dues      enable row level security;
 
+-- Permission model:
+--   SELECT  = any chapter member (everyone in the chapter can VIEW).
+--   write   = chapter ADMIN only (creator / Treasurer / President),
+--             via user_is_chapter_admin().
+--   EXCEPTION: expenses INSERT is allowed for members granted
+--   can_submit_expenses, but only as status='Pending' (no self-approval).
+
 -- ── chapters ─────────────────────────────────────────────────
 drop policy if exists chapters_select on chapters;
 drop policy if exists chapters_insert on chapters;
@@ -237,9 +294,9 @@ create policy chapters_select on chapters for select
 create policy chapters_insert on chapters for insert
   with check (created_by = auth.uid());
 create policy chapters_update on chapters for update
-  using (created_by = auth.uid());
+  using (public.user_is_chapter_admin(id));
 create policy chapters_delete on chapters for delete
-  using (created_by = auth.uid());
+  using (created_by = auth.uid());   -- only the creator may delete the chapter
 
 -- ── members ──────────────────────────────────────────────────
 drop policy if exists members_select on members;
@@ -249,13 +306,14 @@ drop policy if exists members_delete on members;
 
 create policy members_select on members for select
   using (public.user_belongs_to_chapter(chapter_id));
--- INSERT: join flow (user inserts own row) OR admin/member adds someone.
+-- INSERT: self-join (user inserts own row during onboarding) OR an admin
+-- adding someone. A brand-new chapter's first member is the creator joining.
 create policy members_insert on members for insert
-  with check (user_id = auth.uid() or public.user_belongs_to_chapter(chapter_id));
+  with check (user_id = auth.uid() or public.user_is_chapter_admin(chapter_id));
 create policy members_update on members for update
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 create policy members_delete on members for delete
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 
 -- ── budget_accounts ──────────────────────────────────────────
 drop policy if exists budget_accounts_select on budget_accounts;
@@ -266,11 +324,11 @@ drop policy if exists budget_accounts_delete on budget_accounts;
 create policy budget_accounts_select on budget_accounts for select
   using (public.user_belongs_to_chapter(chapter_id));
 create policy budget_accounts_insert on budget_accounts for insert
-  with check (public.user_belongs_to_chapter(chapter_id));
+  with check (public.user_is_chapter_admin(chapter_id));
 create policy budget_accounts_update on budget_accounts for update
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 create policy budget_accounts_delete on budget_accounts for delete
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 
 -- ── expenses ─────────────────────────────────────────────────
 drop policy if exists expenses_select on expenses;
@@ -280,12 +338,18 @@ drop policy if exists expenses_delete on expenses;
 
 create policy expenses_select on expenses for select
   using (public.user_belongs_to_chapter(chapter_id));
+-- INSERT: admins, or permitted members — but a non-admin can only create
+-- Pending expenses (can_submit + status='Pending'). Admins may set any status.
 create policy expenses_insert on expenses for insert
-  with check (public.user_belongs_to_chapter(chapter_id));
+  with check (
+    public.user_is_chapter_admin(chapter_id)
+    or (public.user_can_submit_expenses(chapter_id) and status = 'Pending')
+  );
+-- UPDATE (approve / reject / edit) and DELETE: admins only.
 create policy expenses_update on expenses for update
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 create policy expenses_delete on expenses for delete
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 
 -- ── notifications ────────────────────────────────────────────
 drop policy if exists notifications_select on notifications;
@@ -296,11 +360,12 @@ drop policy if exists notifications_delete on notifications;
 create policy notifications_select on notifications for select
   using (public.user_belongs_to_chapter(chapter_id));
 create policy notifications_insert on notifications for insert
-  with check (public.user_belongs_to_chapter(chapter_id));
+  with check (public.user_is_chapter_admin(chapter_id));
+-- UPDATE: any member may mark notifications read (read receipts are harmless).
 create policy notifications_update on notifications for update
   using (public.user_belongs_to_chapter(chapter_id));
 create policy notifications_delete on notifications for delete
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 
 -- ── dues_collections ─────────────────────────────────────────
 drop policy if exists dues_collections_select on dues_collections;
@@ -311,29 +376,39 @@ drop policy if exists dues_collections_delete on dues_collections;
 create policy dues_collections_select on dues_collections for select
   using (public.user_belongs_to_chapter(chapter_id));
 create policy dues_collections_insert on dues_collections for insert
-  with check (public.user_belongs_to_chapter(chapter_id));
+  with check (public.user_is_chapter_admin(chapter_id));
 create policy dues_collections_update on dues_collections for update
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 create policy dues_collections_delete on dues_collections for delete
-  using (public.user_belongs_to_chapter(chapter_id));
+  using (public.user_is_chapter_admin(chapter_id));
 
 -- ── dues_tiers (scoped via parent dues_collection) ───────────
 drop policy if exists dues_tiers_all on dues_tiers;
-create policy dues_tiers_all on dues_tiers for all
+drop policy if exists dues_tiers_select on dues_tiers;
+drop policy if exists dues_tiers_write  on dues_tiers;
+
+create policy dues_tiers_select on dues_tiers for select
   using (
     dues_collection_id in (
       select id from dues_collections
       where public.user_belongs_to_chapter(chapter_id)
     )
+  );
+create policy dues_tiers_write on dues_tiers for all
+  using (
+    dues_collection_id in (
+      select id from dues_collections
+      where public.user_is_chapter_admin(chapter_id)
+    )
   )
   with check (
     dues_collection_id in (
       select id from dues_collections
-      where public.user_belongs_to_chapter(chapter_id)
+      where public.user_is_chapter_admin(chapter_id)
     )
   );
 
--- ── member_dues (admin sees all in chapter; member sees own) ──
+-- ── member_dues (admin manages; member sees own) ─────────────
 drop policy if exists member_dues_select on member_dues;
 drop policy if exists member_dues_write  on member_dues;
 
@@ -345,18 +420,18 @@ create policy member_dues_select on member_dues for select
     )
     or member_id in (select id from members where user_id = auth.uid())
   );
--- INSERT / UPDATE / DELETE: chapter members (admins) only.
+-- INSERT / UPDATE / DELETE: chapter admins only.
 create policy member_dues_write on member_dues for all
   using (
     dues_collection_id in (
       select id from dues_collections
-      where public.user_belongs_to_chapter(chapter_id)
+      where public.user_is_chapter_admin(chapter_id)
     )
   )
   with check (
     dues_collection_id in (
       select id from dues_collections
-      where public.user_belongs_to_chapter(chapter_id)
+      where public.user_is_chapter_admin(chapter_id)
     )
   );
 
@@ -369,6 +444,8 @@ grant all on all tables in schema public to anon, authenticated;
 grant all on all sequences in schema public to anon, authenticated;
 
 grant execute on function public.user_belongs_to_chapter(uuid) to anon, authenticated;
+grant execute on function public.user_is_chapter_admin(uuid)   to anon, authenticated;
+grant execute on function public.user_can_submit_expenses(uuid) to anon, authenticated;
 grant execute on function public.lookup_join_code(text)        to anon, authenticated;
 grant execute on function public.regenerate_join_code(uuid)    to authenticated;
 grant execute on function public.gen_join_code()               to authenticated;

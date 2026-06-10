@@ -1,11 +1,13 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase, withTimeout } from '../lib/supabase'
+import { isAdminRole } from '../lib/roles'
 
 const AuthContext = createContext(null)
 
 const PROFILE_DEFAULTS = {
   memberId: null, chapterId: null, fullName: '', userRole: '',
   chapterName: '', joinCode: '', isAdmin: false, semester: '',
+  canSubmitExpenses: false,
 }
 
 // Load the signed-in user's profile in ONE query.
@@ -18,7 +20,7 @@ async function loadProfile(user) {
     const { data: member, error } = await withTimeout(
       supabase
         .from('members')
-        .select('id, chapter_id, full_name, role, chapters ( name, join_code, semester, created_by )')
+        .select('id, chapter_id, full_name, role, can_submit_expenses, chapters ( name, join_code, semester, created_by )')
         .eq('user_id', user.id)
         .maybeSingle(),
       6000,
@@ -32,6 +34,9 @@ async function loadProfile(user) {
     if (!member) return null
 
     const chapter = member.chapters ?? {}
+    // Admin = the chapter creator OR an admin-role member (Treasurer/President).
+    // This MUST mirror user_is_chapter_admin() in supabase/schema.sql.
+    const isAdmin = chapter.created_by === user.id || isAdminRole(member.role)
     return {
       memberId:    member.id,
       chapterId:   member.chapter_id,
@@ -40,7 +45,9 @@ async function loadProfile(user) {
       chapterName: chapter.name ?? '',
       joinCode:    chapter.join_code ?? '',
       semester:    chapter.semester ?? '',
-      isAdmin:     chapter.created_by === user.id,
+      isAdmin,
+      // Admins can always submit; otherwise only if granted the flag.
+      canSubmitExpenses: isAdmin || member.can_submit_expenses === true,
     }
   } catch (err) {
     console.warn('[auth] loadProfile threw:', err?.message ?? err)

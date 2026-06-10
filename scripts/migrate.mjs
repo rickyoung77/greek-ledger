@@ -105,6 +105,15 @@ async function main() {
   await runSql(sqlFile('schema.sql'), 'schema.sql')
   console.log('done')
 
+  // Reload the PostgREST schema cache. WITHOUT this, PostgREST keeps using a
+  // stale snapshot of functions/policies, so brand-new RLS rules that call
+  // freshly-changed SECURITY DEFINER functions fail closed (403) until the
+  // next unrelated DDL happens to trigger a reload. This is the Supabase
+  // "I changed a policy and now everything is 403" gotcha — pre-empt it.
+  process.stdout.write('   • Reloading PostgREST schema cache… ')
+  await runSql(`notify pgrst, 'reload schema';`, 'schema cache reload')
+  console.log('done')
+
   // ── self-verify ───────────────────────────────────────────
   console.log('\n🔎 Verifying…')
 

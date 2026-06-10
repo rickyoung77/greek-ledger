@@ -37,7 +37,7 @@ const fmtDate = (s) => new Date(s + 'T00:00:00').toLocaleDateString('en-US', { m
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { chapterId, fullName, loading: authLoading } = useAuth()
+  const { chapterId, fullName, isAdmin, canSubmitExpenses, loading: authLoading } = useAuth()
 
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -193,15 +193,21 @@ export default function Dashboard() {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="gl-serif text-lg font-semibold text-gray-900">Recent Expenses</h2>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
-              + Add Expense
-            </button>
-            <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
-              Send Dues Reminder
-            </button>
-            <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
-              Generate Report
-            </button>
+            {canSubmitExpenses && (
+              <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
+                + Add Expense
+              </button>
+            )}
+            {isAdmin && (
+              <>
+                <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
+                  Send Dues Reminder
+                </button>
+                <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
+                  Generate Report
+                </button>
+              </>
+            )}
           </div>
         </div>
 

@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { ROLES, CLASS_YEARS as JOIN_YEARS } from '../lib/roles'
 import AnimatedBackground from '../components/AnimatedBackground'
 import BrandMark from '../components/BrandMark'
 
-const ROLES      = ['Treasurer', 'President', 'Vice President', 'Officer', 'Member']
 const SEMESTERS  = ['Spring 2025', 'Fall 2025', 'Spring 2026', 'Fall 2026', 'Spring 2027']
-const JOIN_YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior', '5th Year']
 
 function SpinnerIcon() {
   return (

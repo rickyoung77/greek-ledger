@@ -16,7 +16,7 @@ const STATUS_OPTIONS   = ['All Statuses', 'Approved', 'Pending', 'Rejected']
 const BLANK_FORM = { amount: '', budget_account_id: '', category: '', description: '', date: '', submitted_by: '' }
 
 export default function Expenses() {
-  const { chapterId, fullName, loading: authLoading } = useAuth()
+  const { chapterId, fullName, isAdmin, canSubmitExpenses, loading: authLoading } = useAuth()
 
   const [expenses, setExpenses]   = useState([])
   const [accounts, setAccounts]   = useState([])
@@ -183,7 +183,9 @@ export default function Expenses() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button onClick={() => { setCategory('All Categories'); setStatus('All Statuses'); setMember('All Members'); setDateFrom(''); setDateTo('') }} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition">Clear</button>
-          <button onClick={openModal} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>+ Submit Expense</button>
+          {canSubmitExpenses && (
+            <button onClick={openModal} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>+ Submit Expense</button>
+          )}
         </div>
       </div>
 
@@ -215,26 +217,30 @@ export default function Expenses() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
-                      {exp.status === 'Pending' && (
-                        <>
-                          <button onClick={() => updateStatus(exp.id, 'Approved')} disabled={savingId === exp.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#dcfce7', color: '#15803d' }}>
-                            {savingId === exp.id ? '…' : 'Approve'}
-                          </button>
-                          <button onClick={() => updateStatus(exp.id, 'Rejected')} disabled={savingId === exp.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
-                            {savingId === exp.id ? '…' : 'Reject'}
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => deleteExpense(exp.id)}
-                        disabled={deletingId === exp.id}
-                        className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50"
-                        style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}
-                      >
-                        {deletingId === exp.id ? '…' : 'Delete'}
-                      </button>
-                    </div>
+                    {isAdmin ? (
+                      <div className="flex items-center gap-2">
+                        {exp.status === 'Pending' && (
+                          <>
+                            <button onClick={() => updateStatus(exp.id, 'Approved')} disabled={savingId === exp.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#dcfce7', color: '#15803d' }}>
+                              {savingId === exp.id ? '…' : 'Approve'}
+                            </button>
+                            <button onClick={() => updateStatus(exp.id, 'Rejected')} disabled={savingId === exp.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
+                              {savingId === exp.id ? '…' : 'Reject'}
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => deleteExpense(exp.id)}
+                          disabled={deletingId === exp.id}
+                          className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50"
+                          style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}
+                        >
+                          {deletingId === exp.id ? '…' : 'Delete'}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

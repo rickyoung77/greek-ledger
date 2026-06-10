@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { ROLES, CLASS_YEARS as YEARS } from '../lib/roles'
 import Spinner from '../components/Spinner'
 
 const AVATAR_COLORS = ['#3b82f6', '#8b5cf6', '#22c55e', '#f97316', '#ec4899', '#14b8a6', '#f59e0b', '#6366f1']
-const ROLES = ['President', 'VP Finance', 'Treasurer', 'Secretary', 'Social Chair', 'Member']
-const YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior', '5th Year']
 
 const duesStyle = {
   Paid:    { bg: '#dcfce7', text: '#15803d' },
@@ -60,7 +59,7 @@ function Modal({ title, onClose, onSave, saving, error, disabled, children }) {
 }
 
 export default function Members() {
-  const { chapterId, loading: authLoading } = useAuth()
+  const { chapterId, isAdmin, loading: authLoading } = useAuth()
   const [members, setMembers]   = useState([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState(null)
@@ -72,6 +71,7 @@ export default function Members() {
   const [togglingId, setTogglingId]     = useState(null)
   const [removingId, setRemovingId]     = useState(null)
   const [editingYearId, setEditingYearId] = useState(null)
+  const [permTogglingId, setPermTogglingId] = useState(null)
 
   const activeRef = useRef(true)
 
@@ -156,10 +156,23 @@ export default function Members() {
     setRemovingId(null)
   }
 
+  // Grant/revoke a member's permission to submit expenses (admin only).
+  async function toggleSubmitPerm(id, current) {
+    setPermTogglingId(id)
+    const next = !current
+    const { error: err } = await supabase.from('members').update({ can_submit_expenses: next }).eq('id', id)
+    if (!err) setMembers((prev) => prev.map((m) => m.id === id ? { ...m, can_submit_expenses: next } : m))
+    setPermTogglingId(null)
+  }
+
   if (loading) return <Spinner />
   if (error)   return <p className="text-sm text-red-500 py-10 text-center">{error}</p>
 
   const paidCount = members.filter((m) => m.dues_status === 'Paid').length
+
+  const columns = isAdmin
+    ? ['Member', 'Role', 'Year', 'Email', 'Dues Status', 'Can Submit', 'Actions']
+    : ['Member', 'Role', 'Year', 'Email', 'Dues Status']
 
   return (
     <div className="space-y-5">
@@ -167,23 +180,25 @@ export default function Members() {
         <p className="text-sm text-gray-500">
           {members.length} member{members.length !== 1 ? 's' : ''} · {paidCount} dues paid
         </p>
-        <button
-          onClick={openModal}
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90"
-          style={{ backgroundColor: '#b08d4f', color: '#fff' }}
-        >
-          + Add Member
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openModal}
+            className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90"
+            style={{ backgroundColor: '#b08d4f', color: '#fff' }}
+          >
+            + Add Member
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {members.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-12">No members yet. Add your first member above.</p>
+          <p className="text-sm text-gray-400 text-center py-12">No members yet.{isAdmin ? ' Add your first member above.' : ''}</p>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100" style={{ backgroundColor: '#faf8f3' }}>
-                {['Member', 'Role', 'Year', 'Email', 'Dues Status', 'Actions'].map((h) => (
+                {columns.map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -203,7 +218,7 @@ export default function Members() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{m.role}</td>
                     <td className="px-6 py-4 text-sm">
-                      {editingYearId === m.id ? (
+                      {isAdmin && editingYearId === m.id ? (
                         <select
                           autoFocus
                           defaultValue={m.year}
@@ -216,9 +231,9 @@ export default function Members() {
                         </select>
                       ) : (
                         <span
-                          onClick={() => setEditingYearId(m.id)}
-                          className="text-gray-600 cursor-pointer hover:text-blue-600 hover:underline transition"
-                          title="Click to edit year"
+                          onClick={() => isAdmin && setEditingYearId(m.id)}
+                          className={`text-gray-600 transition ${isAdmin ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+                          title={isAdmin ? 'Click to edit year' : undefined}
                         >
                           {m.year || '—'}
                         </span>
@@ -226,28 +241,51 @@ export default function Members() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">{m.email ?? '—'}</td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => toggleDues(m.id, m.dues_status)}
-                        disabled={togglingId === m.id}
-                        title="Click to toggle"
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold transition hover:opacity-70 disabled:opacity-50 cursor-pointer"
-                        style={{ backgroundColor: duesStyle[m.dues_status]?.bg, color: duesStyle[m.dues_status]?.text }}
-                      >
-                        {togglingId === m.id ? '…' : m.dues_status}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
+                      {isAdmin ? (
                         <button
-                          onClick={() => removeMember(m.id)}
-                          disabled={removingId === m.id}
-                          className="text-sm font-medium transition hover:opacity-70 disabled:opacity-40"
-                          style={{ color: '#ef4444' }}
+                          onClick={() => toggleDues(m.id, m.dues_status)}
+                          disabled={togglingId === m.id}
+                          title="Click to toggle"
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold transition hover:opacity-70 disabled:opacity-50 cursor-pointer"
+                          style={{ backgroundColor: duesStyle[m.dues_status]?.bg, color: duesStyle[m.dues_status]?.text }}
                         >
-                          {removingId === m.id ? '…' : 'Remove'}
+                          {togglingId === m.id ? '…' : m.dues_status}
                         </button>
-                      </div>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                          style={{ backgroundColor: duesStyle[m.dues_status]?.bg, color: duesStyle[m.dues_status]?.text }}>
+                          {m.dues_status}
+                        </span>
+                      )}
                     </td>
+                    {isAdmin && (
+                      <>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => toggleSubmitPerm(m.id, m.can_submit_expenses)}
+                            disabled={permTogglingId === m.id}
+                            title="Allow this member to submit expenses (always pending approval)"
+                            className="relative inline-flex items-center transition disabled:opacity-50"
+                            style={{ width: 38, height: 22, borderRadius: 9999, backgroundColor: m.can_submit_expenses ? '#b08d4f' : '#d8d2c5' }}
+                          >
+                            <span
+                              className="absolute bg-white rounded-full transition-all"
+                              style={{ width: 16, height: 16, top: 3, left: m.can_submit_expenses ? 19 : 3, boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
+                            />
+                          </button>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => removeMember(m.id)}
+                            disabled={removingId === m.id}
+                            className="text-sm font-medium transition hover:opacity-70 disabled:opacity-40"
+                            style={{ color: '#ef4444' }}
+                          >
+                            {removingId === m.id ? '…' : 'Remove'}
+                          </button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 )
               })}
@@ -255,6 +293,12 @@ export default function Members() {
           </table>
         )}
       </div>
+
+      {!isAdmin && (
+        <p className="text-xs text-gray-400 text-center">
+          You have view-only access. Ask a Treasurer or President to make changes or grant you expense-submit permission.
+        </p>
+      )}
 
       {showModal && (
         <Modal
