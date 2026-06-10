@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
+import InvoiceUpload from '../components/InvoiceUpload'
 
 const statusStyles = {
   Approved: { bg: '#dcfce7', text: '#15803d' },
@@ -91,6 +92,27 @@ export default function Expenses() {
     setForm({ ...BLANK_FORM, submitted_by: fullName || '' })
     setModalError(null)
     setShowModal(true)
+  }
+
+  // Map Claude's parsed invoice fields onto the form. If the parsed category
+  // matches one of this chapter's budget accounts by name, pre-select it.
+  function applyParsedInvoice(fields) {
+    if (!fields) return
+    const desc = fields.vendor
+      ? `${fields.vendor}${fields.invoice_number ? ` — Invoice ${fields.invoice_number}` : ''}`
+      : (fields.line_items?.[0]?.description ?? '')
+    const matchAcct = fields.category
+      ? accounts.find((a) => a.name.toLowerCase() === String(fields.category).toLowerCase())
+      : null
+    setModalError(null)
+    setForm((prev) => ({
+      ...prev,
+      amount:            fields.amount != null ? String(fields.amount) : prev.amount,
+      date:              fields.date || prev.date,
+      description:       desc || prev.description,
+      category:          fields.category || prev.category,
+      budget_account_id: matchAcct ? matchAcct.id : prev.budget_account_id,
+    }))
   }
 
   async function handleSubmit() {
@@ -268,6 +290,14 @@ export default function Expenses() {
               {modalError && (
                 <p className="text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>{modalError}</p>
               )}
+
+              <InvoiceUpload onParsed={applyParsedInvoice} />
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px" style={{ backgroundColor: '#e9e2d3' }} />
+                <span className="text-xs" style={{ color: '#a99f8b' }}>or enter manually</span>
+                <div className="flex-1 h-px" style={{ backgroundColor: '#e9e2d3' }} />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Amount <span className="text-red-400">*</span></label>
