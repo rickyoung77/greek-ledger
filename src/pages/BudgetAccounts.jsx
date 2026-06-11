@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
@@ -87,18 +87,15 @@ export default function BudgetAccounts() {
   const [editError, setEditError]       = useState(null)
   const [deletingId, setDeletingId]     = useState(null)
 
-  const activeRef = useRef(true)
-
-  // Safety valve: clear loading after 8s to prevent infinite spinner
+  // Safety valve: only fire if still loading after 12s (see Dashboard note).
   useEffect(() => {
+    if (!loading) return
     const timer = setTimeout(() => {
-      if (activeRef.current) {
-        setLoading(false)
-        setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
-      }
-    }, 3000)
-    return () => { activeRef.current = false; clearTimeout(timer) }
-  }, [])
+      setLoading(false)
+      setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
+    }, 12000)
+    return () => clearTimeout(timer)
+  }, [loading])
 
   const load = useCallback(async () => {
     setLoading(true)

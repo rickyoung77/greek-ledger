@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
@@ -39,17 +39,15 @@ export default function Expenses() {
   const [receiptFile, setReceiptFile] = useState(null) // uploaded invoice file to archive
   const [viewingId, setViewingId]     = useState(null)  // expense whose receipt is being opened
 
-  const activeRef = useRef(true)
-
+  // Safety valve: only fire if still loading after 12s (see Dashboard note).
   useEffect(() => {
+    if (!loading) return
     const timer = setTimeout(() => {
-      if (activeRef.current) {
-        setLoading(false)
-        setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
-      }
-    }, 3000)
-    return () => { activeRef.current = false; clearTimeout(timer) }
-  }, [])
+      setLoading(false)
+      setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
+    }, 12000)
+    return () => clearTimeout(timer)
+  }, [loading])
 
   const load = useCallback(async () => {
     setLoading(true)

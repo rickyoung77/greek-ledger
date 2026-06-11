@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
@@ -104,13 +104,14 @@ export default function Dues() {
   const [saving, setSaving]     = useState(false)
   const [createErr, setCreateErr] = useState(null)
 
-  const activeRef = useRef(true)
+  // Safety valve: only fire if still loading after 12s (see Dashboard note).
   useEffect(() => {
+    if (!loading) return
     const t = setTimeout(() => {
-      if (activeRef.current) { setLoading(false); setError(e => e ?? 'Loading timed out. Please refresh.') }
-    }, 3000)
-    return () => { activeRef.current = false; clearTimeout(t) }
-  }, [])
+      setLoading(false); setError(e => e ?? 'Loading timed out. Please refresh.')
+    }, 12000)
+    return () => clearTimeout(t)
+  }, [loading])
 
   // ── Data loading ──
   const load = useCallback(async () => {

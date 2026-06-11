@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -47,18 +47,18 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false)
   const [form, setForm]           = useState({ amount: '', category: 'Social', description: '', date: '' })
 
-  const activeRef = useRef(true)
-
-  // Safety valve: if loading is still true after 8s, force it off
+  // Safety valve: only fire if a load is GENUINELY still pending after 12s.
+  // Tied to `loading` so a successful (even slow) load clears it. The old
+  // version checked "is mounted" instead, so it showed "timed out" on every
+  // page ~3s after load even on success (masked locally by dev StrictMode).
   useEffect(() => {
+    if (!loading) return
     const timer = setTimeout(() => {
-      if (activeRef.current) {
-        setLoading(false)
-        setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
-      }
-    }, 3000)
-    return () => { activeRef.current = false; clearTimeout(timer) }
-  }, [])
+      setLoading(false)
+      setError((prev) => prev ?? 'Loading timed out. Please refresh the page.')
+    }, 12000)
+    return () => clearTimeout(timer)
+  }, [loading])
 
   const load = useCallback(async () => {
     setLoading(true)
