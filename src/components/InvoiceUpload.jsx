@@ -13,8 +13,9 @@ export default function InvoiceUpload({ onParsed }) {
 
   async function handleFile(file) {
     if (!file) return
-    if (file.type !== 'application/pdf') {
-      setStatus('error'); setError('Please upload a PDF invoice.'); return
+    const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!ALLOWED.includes(file.type)) {
+      setStatus('error'); setError('Please upload a PDF or a photo/screenshot (JPG, PNG) of the invoice.'); return
     }
     setFileName(file.name)
     setStatus('parsing'); setError(null)
@@ -55,7 +56,7 @@ export default function InvoiceUpload({ onParsed }) {
         <input
           ref={inputRef}
           type="file"
-          accept="application/pdf"
+          accept="application/pdf,image/*"
           className="hidden"
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
@@ -85,10 +86,10 @@ export default function InvoiceUpload({ onParsed }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 13l3-3m0 0l3 3m-3-3v9" />
             </svg>
             <span className="text-sm font-medium" style={{ color: '#1b2640' }}>
-              Upload a vendor invoice PDF
+              Upload an invoice — PDF or photo
             </span>
             <span className="text-xs" style={{ color: '#a99f8b' }}>
-              Claude reads it and fills the form. Drag &amp; drop or click.
+              Claude reads it and fills the form. PDF, JPG, or a phone photo.
             </span>
           </div>
         )}

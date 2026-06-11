@@ -1,12 +1,14 @@
-// Client helper: send a PDF File to /api/parse-invoice and get back the
-// structured fields. The Anthropic API key stays server-side — this only
-// talks to our own serverless function.
+// Client helper: send an invoice file (PDF or image) to /api/parse-invoice
+// and get back the structured fields. The Anthropic API key stays server-side
+// — this only talks to our own serverless function.
+
+const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
-      // result is "data:application/pdf;base64,XXXX" — strip the prefix.
+      // result is "data:<mime>;base64,XXXX" — strip the prefix.
       const result = String(reader.result)
       const comma = result.indexOf(',')
       resolve(comma >= 0 ? result.slice(comma + 1) : result)
@@ -17,15 +19,15 @@ function fileToBase64(file) {
 }
 
 export async function parseInvoice(file) {
-  if (!file || file.type !== 'application/pdf') {
-    throw new Error('Please upload a PDF invoice.')
+  if (!file || !ALLOWED.includes(file.type)) {
+    throw new Error('Please upload a PDF or an image (JPG/PNG) of the invoice.')
   }
-  const pdfBase64 = await fileToBase64(file)
+  const fileBase64 = await fileToBase64(file)
 
   const res = await fetch('/api/parse-invoice', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pdfBase64, filename: file.name }),
+    body: JSON.stringify({ fileBase64, mediaType: file.type, filename: file.name }),
   })
 
   let payload

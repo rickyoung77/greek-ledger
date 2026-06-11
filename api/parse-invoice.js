@@ -1,16 +1,20 @@
 // Vercel serverless function — POST /api/parse-invoice
 // ───────────────────────────────────────────────────────────────
-// Receives a base64 PDF, sends it to Claude (Opus 4.8) as a document
-// block, and returns structured JSON to auto-fill the expense form.
+// Receives a base64 invoice (PDF or image), sends it to Claude (Opus 4.8),
+// and returns structured JSON to auto-fill the expense form. PDFs go in as a
+// `document` block; images (a photo/screenshot of an invoice) go in as an
+// `image` block — Claude reads both.
 //
 // SECURITY: ANTHROPIC_API_KEY lives ONLY in the server environment
-// (no VITE_ prefix → never bundled into the browser). The PDF round-trips
+// (no VITE_ prefix → never bundled into the browser). The file round-trips
 // through this function; the key is never exposed to the client.
 
 import Anthropic from '@anthropic-ai/sdk'
 
 const MODEL = 'claude-opus-4-8'
-const MAX_PDF_BYTES = 12 * 1024 * 1024 // 12 MB cap (base64 ~ +33%)
+const MAX_FILE_BYTES = 12 * 1024 * 1024 // 12 MB cap (base64 ~ +33%)
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const ALLOWED_TYPES = ['application/pdf', ...IMAGE_TYPES]
 
 // Frozen system prompt → cached across requests (prompt caching is a
 // prefix match; keep this byte-identical and put nothing volatile in it).
@@ -75,14 +79,25 @@ export default async function handler(req, res) {
   if (typeof body === 'string') {
     try { body = JSON.parse(body) } catch { body = {} }
   }
-  const pdfBase64 = body?.pdfBase64
-  if (!pdfBase64 || typeof pdfBase64 !== 'string') {
-    return res.status(400).json({ error: 'Missing pdfBase64 in request body.' })
+  // Accept { fileBase64, mediaType } (PDF or image). Back-compat: an older
+  // client may still send { pdfBase64 } with no mediaType — treat as PDF.
+  const fileBase64 = body?.fileBase64 ?? body?.pdfBase64
+  const mediaType = body?.mediaType ?? 'application/pdf'
+  if (!fileBase64 || typeof fileBase64 !== 'string') {
+    return res.status(400).json({ error: 'Missing file data in request body.' })
+  }
+  if (!ALLOWED_TYPES.includes(mediaType)) {
+    return res.status(400).json({ error: 'Unsupported file type. Upload a PDF, JPG, or PNG.' })
   }
   // Rough size guard before we hand a giant payload to the API.
-  if (pdfBase64.length * 0.75 > MAX_PDF_BYTES) {
-    return res.status(413).json({ error: 'PDF is too large (max 12 MB).' })
+  if (fileBase64.length * 0.75 > MAX_FILE_BYTES) {
+    return res.status(413).json({ error: 'File is too large (max 12 MB).' })
   }
+
+  // PDFs go in as a document block; images as an image block.
+  const fileBlock = IMAGE_TYPES.includes(mediaType)
+    ? { type: 'image', source: { type: 'base64', media_type: mediaType, data: fileBase64 } }
+    : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: fileBase64 } }
 
   const client = new Anthropic({ apiKey })
 
@@ -98,10 +113,7 @@ export default async function handler(req, res) {
         {
           role: 'user',
           content: [
-            {
-              type: 'document',
-              source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
-            },
+            fileBlock,
             { type: 'text', text: 'Extract the invoice fields as structured JSON.' },
           ],
         },
