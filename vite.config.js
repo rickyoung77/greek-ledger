@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // Dev-only: run the Vercel-style /api/*.js functions under `vite dev`.
@@ -6,11 +6,19 @@ import react from '@vitejs/plugin-react'
 // matching handler from /api and adapts the Node req/res to the same shape
 // Vercel provides (req.body parsed as JSON, res.status().json()). In
 // production, Vercel runs /api/*.js directly and this plugin isn't used.
-function devApi() {
+function devApi(mode) {
   return {
     name: 'dev-api',
     apply: 'serve',
     configureServer(server) {
+      // Vite only exposes VITE_-prefixed vars to the client; server-side
+      // functions need the unprefixed keys (e.g. ANTHROPIC_API_KEY) in
+      // process.env. loadEnv('', cwd, '') reads ALL keys from .env regardless
+      // of prefix — inject any that aren't already set. Dev parity with Vercel.
+      const fileEnv = loadEnv(mode, process.cwd(), '')
+      for (const [k, v] of Object.entries(fileEnv)) {
+        if (process.env[k] === undefined) process.env[k] = v
+      }
       server.middlewares.use(async (req, res, next) => {
         if (!req.url || !req.url.startsWith('/api/')) return next()
         const route = req.url.split('?')[0].replace(/\/$/, '')
@@ -50,6 +58,6 @@ function devApi() {
   }
 }
 
-export default defineConfig({
-  plugins: [react(), devApi()],
-})
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), devApi(mode)],
+}))
