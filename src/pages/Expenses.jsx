@@ -36,6 +36,8 @@ export default function Expenses() {
   const [form, setForm]           = useState(BLANK_FORM)
   const [modalSaving, setModalSaving] = useState(false)
   const [modalError, setModalError]   = useState(null)
+  const [receiptFile, setReceiptFile] = useState(null) // uploaded invoice file to archive
+  const [viewingId, setViewingId]     = useState(null)  // expense whose receipt is being opened
 
   const activeRef = useRef(true)
 
@@ -91,12 +93,15 @@ export default function Expenses() {
   function openModal() {
     setForm({ ...BLANK_FORM, submitted_by: fullName || '' })
     setModalError(null)
+    setReceiptFile(null)
     setShowModal(true)
   }
 
   // Map Claude's parsed invoice fields onto the form. If the parsed category
   // matches one of this chapter's budget accounts by name, pre-select it.
-  function applyParsedInvoice(fields) {
+  // Also keep the uploaded file so it can be archived on submit.
+  function applyParsedInvoice(fields, file) {
+    if (file) setReceiptFile(file)
     if (!fields) return
     const desc = fields.vendor
       ? `${fields.vendor}${fields.invoice_number ? ` — Invoice ${fields.invoice_number}` : ''}`
@@ -135,12 +140,49 @@ export default function Expenses() {
         date:              form.date || new Date().toISOString().slice(0, 10),
       }).select().single()
       if (err) throw err
-      setExpenses((prev) => [data, ...prev])
-      setShowModal(false)
+
+      // Archive the uploaded invoice file (if any) to the private receipts
+      // bucket, then link it on the expense row. A failed upload doesn't lose
+      // the expense — it's already saved; we just note the receipt is missing.
+      let saved = data
+      if (receiptFile) {
+        const ext = receiptFile.name.split('.').pop()?.toLowerCase() || 'pdf'
+        const path = `${chapterId}/${data.id}/invoice.${ext}`
+        const { error: upErr } = await supabase.storage
+          .from('receipts')
+          .upload(path, receiptFile, { contentType: receiptFile.type, upsert: true })
+        if (upErr) {
+          setModalError('Expense saved, but the receipt upload failed. You can re-attach it later.')
+        } else {
+          const { data: updated } = await supabase
+            .from('expenses').update({ receipt_path: path }).eq('id', data.id).select().single()
+          if (updated) saved = updated
+        }
+      }
+
+      setExpenses((prev) => [saved, ...prev])
+      setReceiptFile(null)
+      if (!receiptFile || saved.receipt_path) setShowModal(false)
     } catch (err) {
       setModalError(err?.message ?? 'Failed to submit expense.')
     } finally {
       setModalSaving(false)
+    }
+  }
+
+  // Open a receipt via a short-lived signed URL (bucket is private).
+  async function viewReceipt(exp) {
+    if (!exp.receipt_path) return
+    setViewingId(exp.id)
+    try {
+      const { data, error: err } = await supabase.storage
+        .from('receipts').createSignedUrl(exp.receipt_path, 60)
+      if (err || !data?.signedUrl) throw err || new Error('No URL')
+      window.open(data.signedUrl, '_blank', 'noopener')
+    } catch {
+      setError('Could not open the receipt.')
+    } finally {
+      setViewingId(null)
     }
   }
 
@@ -220,7 +262,7 @@ export default function Expenses() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100" style={{ backgroundColor: '#faf8f3' }}>
-                {['Date', 'Category', 'Description', 'Amount', 'Submitted By', 'Status', 'Actions'].map((h) => (
+                {['Date', 'Category', 'Description', 'Amount', 'Submitted By', 'Status', 'Receipt', 'Actions'].map((h) => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -237,6 +279,24 @@ export default function Expenses() {
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: statusStyles[exp.status]?.bg, color: statusStyles[exp.status]?.text }}>
                       {exp.status}
                     </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    {exp.receipt_path ? (
+                      <button
+                        onClick={() => viewReceipt(exp)}
+                        disabled={viewingId === exp.id}
+                        className="inline-flex items-center gap-1 text-xs font-semibold transition hover:opacity-70 disabled:opacity-50"
+                        style={{ color: '#b08d4f' }}
+                        title="View archived invoice"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        {viewingId === exp.id ? '…' : 'View'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5">
                     {isAdmin ? (
@@ -267,7 +327,7 @@ export default function Expenses() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-400">No expenses match your filters.</td></tr>
+                <tr><td colSpan={8} className="px-6 py-12 text-center text-sm text-gray-400">No expenses match your filters.</td></tr>
               )}
             </tbody>
           </table>

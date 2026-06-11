@@ -80,8 +80,13 @@ create table if not exists expenses (
   submitted_by      text not null,
   status            text not null default 'Pending' check (status in ('Approved', 'Pending', 'Rejected')),
   date              date not null default current_date,
+  -- Path in the private 'receipts' storage bucket of the attached invoice
+  -- file (PDF/image). null = no receipt attached. Format: <chapter_id>/<expense_id>/<filename>
+  receipt_path      text,
   created_at        timestamptz not null default now()
 );
+-- Idempotent add for databases created before this column existed.
+alter table expenses add column if not exists receipt_path text;
 
 -- ── notifications ────────────────────────────────────────────
 create table if not exists notifications (
@@ -433,6 +438,54 @@ create policy member_dues_write on member_dues for all
       select id from dues_collections
       where public.user_is_chapter_admin(chapter_id)
     )
+  );
+
+
+-- ============================================================
+-- STORAGE — receipt archive (private 'receipts' bucket)
+-- ============================================================
+-- Uploaded invoice files (PDF/image) are stored at
+--   receipts/<chapter_id>/<expense_id>/<filename>
+-- The bucket is PRIVATE; the app serves files via short-lived signed URLs.
+-- Access is gated by chapter membership: the first path segment is the
+-- chapter_id, checked with user_belongs_to_chapter() — same model as tables.
+
+insert into storage.buckets (id, name, public)
+values ('receipts', 'receipts', false)
+on conflict (id) do nothing;
+
+-- (storage.objects already has RLS enabled by Supabase.)
+drop policy if exists receipts_select on storage.objects;
+drop policy if exists receipts_insert on storage.objects;
+drop policy if exists receipts_update on storage.objects;
+drop policy if exists receipts_delete on storage.objects;
+
+-- View/download: any member of the chapter that owns the file.
+create policy receipts_select on storage.objects for select to authenticated
+  using (
+    bucket_id = 'receipts'
+    and public.user_belongs_to_chapter((storage.foldername(name))[1]::uuid)
+  );
+
+-- Upload: members permitted to submit expenses (admins always qualify).
+create policy receipts_insert on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'receipts'
+    and public.user_can_submit_expenses((storage.foldername(name))[1]::uuid)
+  );
+
+-- Replace an existing object: same as upload (e.g. re-attach a receipt).
+create policy receipts_update on storage.objects for update to authenticated
+  using (
+    bucket_id = 'receipts'
+    and public.user_can_submit_expenses((storage.foldername(name))[1]::uuid)
+  );
+
+-- Delete: chapter admins only.
+create policy receipts_delete on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'receipts'
+    and public.user_is_chapter_admin((storage.foldername(name))[1]::uuid)
   );
 
 
