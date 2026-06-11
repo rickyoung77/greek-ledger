@@ -24,11 +24,26 @@ export async function parseInvoice(file) {
   }
   const fileBase64 = await fileToBase64(file)
 
-  const res = await fetch('/api/parse-invoice', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileBase64, mediaType: file.type, filename: file.name }),
-  })
+  // Safety timeout — never let the UI hang on a stuck request.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 45000)
+
+  let res
+  try {
+    res = await fetch('/api/parse-invoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileBase64, mediaType: file.type, filename: file.name }),
+      signal: controller.signal,
+    })
+  } catch (err) {
+    clearTimeout(timer)
+    if (err?.name === 'AbortError') {
+      throw new Error('Reading the invoice took too long. Please try again or enter the details manually.')
+    }
+    throw new Error('Network error reaching the parser. Please try again or enter the details manually.')
+  }
+  clearTimeout(timer)
 
   let payload
   try { payload = await res.json() } catch { payload = null }
