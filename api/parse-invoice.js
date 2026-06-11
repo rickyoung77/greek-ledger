@@ -126,11 +126,20 @@ export default async function handler(req, res) {
   } catch (err) {
     // Map the SDK's typed errors to clean client messages; never leak the key/stack.
     const status = err?.status ?? 500
+    const apiMsg = String(err?.message ?? '')
     let clientMsg = 'Could not read the invoice. Please try again or enter the details manually.'
-    if (status === 401) clientMsg = 'Invoice parsing is misconfigured (invalid API key).'
-    else if (status === 429) clientMsg = 'Invoice parsing is busy right now. Please try again in a moment.'
-    else if (status === 413) clientMsg = 'That PDF is too large to parse.'
-    console.error('[parse-invoice] error:', status, err?.message)
+    if (status === 401) {
+      clientMsg = 'Invoice parsing is misconfigured (invalid API key).'
+    } else if (status === 429) {
+      clientMsg = 'Invoice parsing is busy right now. Please try again in a moment.'
+    } else if (status === 413 || /too large|request_too_large/i.test(apiMsg)) {
+      clientMsg = 'That PDF is too large to parse (max 12 MB / 100 pages).'
+    } else if (/credit|billing|insufficient/i.test(apiMsg)) {
+      clientMsg = 'Invoice parsing is unavailable — the account is out of API credits.'
+    } else if (/pdf.*not valid|not a valid pdf|invalid.*pdf|could not.*pdf|unsupported|corrupt/i.test(apiMsg)) {
+      clientMsg = "This file isn't a readable PDF. It may be password-protected, a scanned image saved oddly, or not a real PDF. Try re-saving/exporting it as a standard PDF, or enter the details manually."
+    }
+    console.error('[parse-invoice] error:', status, apiMsg)
     return res.status(status >= 400 && status < 600 ? status : 500).json({ error: clientMsg })
   }
 }
