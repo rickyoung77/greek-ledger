@@ -123,7 +123,7 @@ async function main() {
     'verify tables'
   )
   const tableNames = (Array.isArray(tables) ? tables : []).map((r) => r.table_name)
-  const expected = ['budget_accounts','chapters','dues_collections','dues_tiers','expenses','member_dues','members','notifications']
+  const expected = ['budget_accounts','chapters','dues_collections','dues_tiers','expenses','income','member_dues','members','notifications','semesters']
   const missing = expected.filter((t) => !tableNames.includes(t))
   console.log(`   tables present: ${tableNames.length ? tableNames.join(', ') : '(none)'}`)
   if (missing.length) die(`Missing expected tables: ${missing.join(', ')}`)

@@ -16,6 +16,7 @@ drop table if exists member_dues       cascade;
 drop table if exists dues_tiers        cascade;
 drop table if exists dues_collections  cascade;
 drop table if exists notifications     cascade;
+drop table if exists income            cascade;
 drop table if exists expenses          cascade;
 drop table if exists budget_accounts   cascade;
 drop table if exists semesters         cascade;

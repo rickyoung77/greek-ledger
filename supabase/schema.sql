@@ -85,6 +85,25 @@ create table if not exists expenses (
   receipt_path      text,
   created_at        timestamptz not null default now()
 );
+
+-- ── income ───────────────────────────────────────────────────
+-- Money coming IN (tailgate collections, door fees, fundraisers, etc.).
+-- Mirrors expenses but has no approval status — income is recorded, not
+-- approved. semester_id is auto-filled by the shared trigger.
+create table if not exists income (
+  id           uuid primary key default gen_random_uuid(),
+  chapter_id   uuid not null references chapters(id) on delete cascade,
+  semester_id  uuid references semesters(id) on delete cascade,
+  description  text not null,
+  amount       numeric(12,2) not null,
+  category     text not null,            -- Tailgate / Door Fees / Fundraiser / Dues / Other
+  recorded_by  text not null,
+  date         date not null default current_date,
+  created_at   timestamptz not null default now()
+);
+create index if not exists idx_income_chapter  on income (chapter_id);
+create index if not exists idx_income_semester on income (semester_id);
+
 -- Idempotent add for databases created before this column existed.
 alter table expenses add column if not exists receipt_path text;
 
@@ -276,6 +295,7 @@ alter table chapters         enable row level security;
 alter table members          enable row level security;
 alter table budget_accounts  enable row level security;
 alter table expenses         enable row level security;
+alter table income           enable row level security;
 alter table notifications    enable row level security;
 alter table dues_collections enable row level security;
 alter table dues_tiers       enable row level security;
@@ -354,6 +374,22 @@ create policy expenses_insert on expenses for insert
 create policy expenses_update on expenses for update
   using (public.user_is_chapter_admin(chapter_id));
 create policy expenses_delete on expenses for delete
+  using (public.user_is_chapter_admin(chapter_id));
+
+-- ── income ───────────────────────────────────────────────────
+drop policy if exists income_select on income;
+drop policy if exists income_insert on income;
+drop policy if exists income_update on income;
+drop policy if exists income_delete on income;
+
+create policy income_select on income for select
+  using (public.user_belongs_to_chapter(chapter_id));
+-- INSERT: admins or members permitted to record finances (same gate as expenses).
+create policy income_insert on income for insert
+  with check (public.user_can_submit_expenses(chapter_id));
+create policy income_update on income for update
+  using (public.user_is_chapter_admin(chapter_id));
+create policy income_delete on income for delete
   using (public.user_is_chapter_admin(chapter_id));
 
 -- ── notifications ────────────────────────────────────────────
@@ -558,9 +594,11 @@ $$;
 drop trigger if exists trg_set_semester_budget on budget_accounts;
 drop trigger if exists trg_set_semester_expense on expenses;
 drop trigger if exists trg_set_semester_dues on dues_collections;
+drop trigger if exists trg_set_semester_income on income;
 create trigger trg_set_semester_budget  before insert on budget_accounts  for each row execute function public.set_active_semester();
 create trigger trg_set_semester_expense before insert on expenses         for each row execute function public.set_active_semester();
 create trigger trg_set_semester_dues    before insert on dues_collections for each row execute function public.set_active_semester();
+create trigger trg_set_semester_income  before insert on income           for each row execute function public.set_active_semester();
 
 -- Backfill: every existing chapter needs one active semester, and existing
 -- rows need to point at it. Idempotent — only acts where data is missing.
@@ -572,6 +610,7 @@ where not exists (select 1 from semesters s where s.chapter_id = c.id);
 update budget_accounts b set semester_id = public.active_semester_id(b.chapter_id)  where b.semester_id is null;
 update expenses e        set semester_id = public.active_semester_id(e.chapter_id)  where e.semester_id is null;
 update dues_collections d set semester_id = public.active_semester_id(d.chapter_id) where d.semester_id is null;
+update income i          set semester_id = public.active_semester_id(i.chapter_id)  where i.semester_id is null;
 
 -- RLS for semesters: members view; admins manage.
 alter table semesters enable row level security;
