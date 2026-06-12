@@ -1,15 +1,36 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useSemester } from '../context/SemesterContext'
 
 export default function Settings() {
   const { chapterId, chapterName, semester, joinCode: initialCode, isAdmin, userRole, refreshProfile } = useAuth()
+  const { activeSemester, rollOver } = useSemester()
   const [code, setCode]           = useState(initialCode)
   const [copied, setCopied]       = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [regenError, setRegenError]     = useState(null)
 
+  // Semester rollover state
+  const [rollName, setRollName]   = useState('')
+  const [rolling, setRolling]     = useState(false)
+  const [rollError, setRollError] = useState(null)
+  const [rollDone, setRollDone]   = useState(false)
+
   useEffect(() => { setCode(initialCode) }, [initialCode])
+
+  async function handleRollOver() {
+    const name = rollName.trim()
+    if (!name) { setRollError('Enter a name for the new semester.'); return }
+    if (!window.confirm(
+      `Roll over to "${name}"?\n\nThe current semester (${activeSemester?.name ?? 'active'}) will be archived (read-only but still viewable). A fresh semester starts with empty budgets, expenses, and dues. Members carry over with dues reset to Pending.`
+    )) return
+    setRolling(true); setRollError(null)
+    const { error } = await rollOver(name)
+    if (error) { setRollError(error.message ?? 'Rollover failed.'); setRolling(false); return }
+    await refreshProfile()
+    setRollDone(true); setRollName(''); setRolling(false)
+  }
 
   async function handleRegenerate() {
     if (!window.confirm('Regenerate the join code? The old code will stop working immediately.')) return
@@ -128,6 +149,69 @@ export default function Settings() {
               <p className="text-sm font-semibold text-gray-900">Join Code — Admin Only</p>
               <p className="text-sm text-gray-500 mt-0.5">Ask your chapter admin to share the join code with new members.</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Semester rollover — admin only */}
+      {isAdmin && (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100">
+            <h2 className="gl-serif text-xl font-semibold text-gray-900">Semester Rollover</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Archive the current semester and start fresh — for the annual treasurer handoff.
+            </p>
+          </div>
+          <div className="px-6 py-6">
+            {rollDone ? (
+              <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="#15803d" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#15803d' }}>New semester started.</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#15803d' }}>The previous term is archived and viewable from the semester switcher in the top bar.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {rollError && (
+                  <p className="text-sm px-3 py-2 rounded-lg mb-4" style={{ backgroundColor: '#fbeaea', color: '#9b2c2c' }}>{rollError}</p>
+                )}
+                <div className="p-4 rounded-lg mb-4" style={{ backgroundColor: '#faf8f3', borderLeft: '3px solid #b08d4f' }}>
+                  <p className="text-xs" style={{ color: '#8f7039' }}>
+                    <span className="font-semibold">Currently active:</span> {activeSemester?.name ?? '—'}. Rolling over archives it
+                    (read-only, still viewable) and opens a clean term. Budgets, expenses, and dues start empty;
+                    members carry over with dues reset to Pending. Nothing is deleted.
+                  </p>
+                </div>
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className="block text-[13px] font-medium mb-1.5" style={{ color: '#5b677f' }}>New semester name</label>
+                    <input
+                      type="text"
+                      value={rollName}
+                      onChange={(e) => { setRollName(e.target.value); setRollError(null) }}
+                      placeholder="e.g. Spring 2027"
+                      className="gl-input"
+                    />
+                  </div>
+                  <button
+                    onClick={handleRollOver}
+                    disabled={rolling || !rollName.trim()}
+                    className="gl-btn-brass px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                  >
+                    {rolling && (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                    )}
+                    {rolling ? 'Rolling over…' : 'Start New Semester'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

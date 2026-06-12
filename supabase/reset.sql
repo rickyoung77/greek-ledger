@@ -18,6 +18,7 @@ drop table if exists dues_collections  cascade;
 drop table if exists notifications     cascade;
 drop table if exists expenses          cascade;
 drop table if exists budget_accounts   cascade;
+drop table if exists semesters         cascade;
 drop table if exists members           cascade;
 drop table if exists chapters          cascade;
 
@@ -25,6 +26,10 @@ drop table if exists chapters          cascade;
 drop function if exists public.user_belongs_to_chapter(uuid)  cascade;
 drop function if exists public.user_is_chapter_admin(uuid)    cascade;
 drop function if exists public.user_can_submit_expenses(uuid) cascade;
+drop function if exists public.active_semester_id(uuid)       cascade;
+drop function if exists public.create_initial_semester()      cascade;
+drop function if exists public.set_active_semester()          cascade;
+drop function if exists public.roll_over_semester(uuid, text) cascade;
 drop function if exists public.lookup_join_code(text)         cascade;
 drop function if exists public.regenerate_join_code(uuid)     cascade;
 drop function if exists public.gen_join_code()                cascade;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useSemester } from '../context/SemesterContext'
 import Spinner from '../components/Spinner'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ function CollectionCard({ col, stats, selected, onSelect }) {
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function Dues() {
   const { chapterId, isAdmin, loading: authLoading } = useAuth()
+  const { viewingSemesterId, isViewingActive } = useSemester()
 
   // Data
   const [collections, setCollections] = useState([])
@@ -117,9 +119,11 @@ export default function Dues() {
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const { data: cols, error: e1 } = await supabase
+      let colQ = supabase
         .from('dues_collections').select('*')
         .eq('chapter_id', chapterId).order('created_at', { ascending: false })
+      if (viewingSemesterId) colQ = colQ.eq('semester_id', viewingSemesterId)
+      const { data: cols, error: e1 } = await colQ
       if (e1) throw e1
       const cols_ = cols ?? []
       setCollections(cols_)
@@ -140,7 +144,7 @@ export default function Dues() {
     } finally {
       setLoading(false)
     }
-  }, [chapterId])
+  }, [chapterId, viewingSemesterId])
 
   useEffect(() => {
     if (chapterId) load()
@@ -260,7 +264,7 @@ export default function Dues() {
         <p className="text-sm text-gray-500">
           {activeCount > 0 ? `${activeCount} active collection${activeCount !== 1 ? 's' : ''}` : 'No active collections'}
         </p>
-        {isAdmin && (
+        {isAdmin && isViewingActive && (
           <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
             + Create Dues Collection
           </button>

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { SemesterProvider } from './context/SemesterContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -88,7 +89,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <SemesterProvider>
+          <AppRoutes />
+        </SemesterProvider>
       </AuthProvider>
     </BrowserRouter>
   )

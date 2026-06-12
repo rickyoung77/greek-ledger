@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
 import InvoiceUpload from '../components/InvoiceUpload'
+import { useSemester } from '../context/SemesterContext'
 
 const statusStyles = {
   Approved: { bg: '#dcfce7', text: '#15803d' },
@@ -18,6 +19,7 @@ const BLANK_FORM = { amount: '', budget_account_id: '', category: '', descriptio
 
 export default function Expenses() {
   const { chapterId, fullName, isAdmin, canSubmitExpenses, loading: authLoading } = useAuth()
+  const { viewingSemesterId, isViewingActive } = useSemester()
 
   const [expenses, setExpenses]   = useState([])
   const [accounts, setAccounts]   = useState([])
@@ -53,10 +55,13 @@ export default function Expenses() {
     setLoading(true)
     setError(null)
     try {
-      const [expResult, acctResult] = await Promise.all([
-        supabase.from('expenses').select('*').eq('chapter_id', chapterId).order('date', { ascending: false }),
-        supabase.from('budget_accounts').select('id, name, color').eq('chapter_id', chapterId).order('name'),
-      ])
+      let expQ = supabase.from('expenses').select('*').eq('chapter_id', chapterId).order('date', { ascending: false })
+      let acctQ = supabase.from('budget_accounts').select('id, name, color').eq('chapter_id', chapterId).order('name')
+      if (viewingSemesterId) {
+        expQ = expQ.eq('semester_id', viewingSemesterId)
+        acctQ = acctQ.eq('semester_id', viewingSemesterId)
+      }
+      const [expResult, acctResult] = await Promise.all([expQ, acctQ])
       if (expResult.error) throw expResult.error
       if (acctResult.error) throw acctResult.error
       setExpenses(expResult.data ?? [])
@@ -66,7 +71,7 @@ export default function Expenses() {
     } finally {
       setLoading(false)
     }
-  }, [chapterId])
+  }, [chapterId, viewingSemesterId])
 
   useEffect(() => {
     if (chapterId) load()
@@ -245,7 +250,7 @@ export default function Expenses() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button onClick={() => { setCategory('All Categories'); setStatus('All Statuses'); setMember('All Members'); setDateFrom(''); setDateTo('') }} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition">Clear</button>
-          {canSubmitExpenses && (
+          {canSubmitExpenses && isViewingActive && (
             <button onClick={openModal} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>+ Submit Expense</button>
           )}
         </div>

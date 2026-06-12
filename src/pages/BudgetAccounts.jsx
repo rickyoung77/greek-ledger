@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useSemester } from '../context/SemesterContext'
 import Spinner from '../components/Spinner'
 
 const COLOR_OPTIONS = [
@@ -64,6 +65,7 @@ function ModalShell({ title, onClose, onSave, saving, error, disabled, children 
 
 export default function BudgetAccounts() {
   const { chapterId, isAdmin, loading: authLoading } = useAuth()
+  const { viewingSemesterId, isViewingActive } = useSemester()
   const [accounts, setAccounts] = useState([])
   const [expanded, setExpanded] = useState({})
   const [loading, setLoading]   = useState(true)
@@ -101,12 +103,13 @@ export default function BudgetAccounts() {
     setLoading(true)
     setError(null)
     try {
+      const bySem = (q) => (viewingSemesterId ? q.eq('semester_id', viewingSemesterId) : q)
       const [
         { data: acctRows, error: e1 },
         { data: expRows,  error: e2 },
       ] = await Promise.all([
-        supabase.from('budget_accounts').select('*').eq('chapter_id', chapterId).order('created_at'),
-        supabase.from('expenses').select('id, budget_account_id, amount, status').eq('chapter_id', chapterId),
+        bySem(supabase.from('budget_accounts').select('*').eq('chapter_id', chapterId).order('created_at')),
+        bySem(supabase.from('expenses').select('id, budget_account_id, amount, status').eq('chapter_id', chapterId)),
       ])
       if (e1 || e2) throw e1 || e2
 
@@ -139,7 +142,7 @@ export default function BudgetAccounts() {
     } finally {
       setLoading(false)
     }
-  }, [chapterId])
+  }, [chapterId, viewingSemesterId])
 
   useEffect(() => {
     if (chapterId) load()
@@ -251,7 +254,7 @@ export default function BudgetAccounts() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">{isAdmin ? 'Manage chapter budget accounts and sub-categories' : 'Chapter budget accounts and sub-categories'}</p>
-        {isAdmin && (
+        {isAdmin && isViewingActive && (
           <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
             + Create Account
           </button>
@@ -339,7 +342,7 @@ export default function BudgetAccounts() {
                                 ${sub.spent.toLocaleString()}<span className="text-gray-300"> / </span>${Number(sub.total_budget).toLocaleString()}
                               </span>
                               <div className="flex items-center gap-2 justify-end">
-                                {isAdmin ? (
+                                {isAdmin && isViewingActive ? (
                                   <>
                                     <button onClick={() => openEdit(sub)} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80" style={{ backgroundColor: '#eff6ff', color: '#3b82f6' }}>
                                       Edit
@@ -356,7 +359,7 @@ export default function BudgetAccounts() {
                           )
                         })}
                       </div>
-                      {isAdmin && (
+                      {isAdmin && isViewingActive && (
                         <div className="px-6 py-3 border-t border-gray-100 flex justify-end">
                           <button onClick={() => openSub(acc)} className="text-sm font-semibold transition hover:opacity-80" style={{ color: acc.color }}>
                             + Add Sub-Account

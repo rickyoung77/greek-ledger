@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useSemester } from '../context/SemesterContext'
 import Spinner from '../components/Spinner'
 
 const CARD_META = [
@@ -38,6 +39,7 @@ const fmtDate = (s) => new Date(s + 'T00:00:00').toLocaleDateString('en-US', { m
 export default function Dashboard() {
   const navigate = useNavigate()
   const { chapterId, fullName, isAdmin, canSubmitExpenses, loading: authLoading } = useAuth()
+  const { viewingSemesterId, isViewingActive } = useSemester()
 
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -64,15 +66,16 @@ export default function Dashboard() {
     setLoading(true)
     setError(null)
     try {
+      const bySem = (q) => (viewingSemesterId ? q.eq('semester_id', viewingSemesterId) : q)
       const [
         { data: topAccounts, error: e1 },
         { data: allAccounts, error: e2 },
         { data: expenseRows, error: e3 },
         { count: memberCount, error: e4 },
       ] = await Promise.all([
-        supabase.from('budget_accounts').select('*').eq('chapter_id', chapterId).is('parent_id', null),
-        supabase.from('budget_accounts').select('*').eq('chapter_id', chapterId),
-        supabase.from('expenses').select('*').eq('chapter_id', chapterId).order('date', { ascending: false }),
+        bySem(supabase.from('budget_accounts').select('*').eq('chapter_id', chapterId).is('parent_id', null)),
+        bySem(supabase.from('budget_accounts').select('*').eq('chapter_id', chapterId)),
+        bySem(supabase.from('expenses').select('*').eq('chapter_id', chapterId).order('date', { ascending: false })),
         supabase.from('members').select('*', { count: 'exact', head: true }).eq('chapter_id', chapterId),
       ])
       if (e1 || e2 || e3 || e4) throw e1 || e2 || e3 || e4
@@ -109,7 +112,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [chapterId])
+  }, [chapterId, viewingSemesterId])
 
   useEffect(() => {
     if (chapterId) load()
@@ -193,7 +196,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="gl-serif text-lg font-semibold text-gray-900">Recent Expenses</h2>
           <div className="flex items-center gap-2">
-            {canSubmitExpenses && (
+            {canSubmitExpenses && isViewingActive && (
               <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
                 + Add Expense
               </button>

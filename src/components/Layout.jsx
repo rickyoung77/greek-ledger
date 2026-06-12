@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useSemester } from '../context/SemesterContext'
 import BrandMark from './BrandMark'
 
 const NAV_ITEMS = [
@@ -87,6 +88,7 @@ function avatarInitials(name) {
 export default function Layout({ children }) {
   const location = useLocation()
   const { fullName, chapterName, userRole, semester, signOut } = useAuth()
+  const { semesters, viewingSemesterId, setViewingId, isViewingActive, viewingSemester } = useSemester()
 
   const pageTitle = PAGE_TITLES[location.pathname] || 'Greek Ledger'
   const initials  = avatarInitials(fullName)
@@ -170,6 +172,22 @@ export default function Layout({ children }) {
         >
           <h1 className="gl-serif" style={{ fontSize: '1.85rem', fontWeight: 600, color: '#1b2640' }}>{pageTitle}</h1>
           <div className="flex items-center gap-5">
+            {semesters.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="gl-eyebrow" style={{ color: '#a99f8b' }}>Semester</span>
+                <select
+                  value={viewingSemesterId ?? ''}
+                  onChange={(e) => setViewingId(e.target.value)}
+                  className="text-[13px] font-medium rounded-lg px-2.5 py-1.5 focus:outline-none transition"
+                  style={{ border: '1px solid #e3dccd', backgroundColor: isViewingActive ? '#fff' : '#f6efe0', color: '#1b2640' }}
+                  title="Switch semester (archived terms are read-only)"
+                >
+                  {semesters.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}{s.status === 'archived' ? ' (archived)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <button className="relative p-2 rounded-lg transition" style={{ color: '#8a8170' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3efe6'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -190,6 +208,16 @@ export default function Layout({ children }) {
             </div>
           </div>
         </header>
+
+        {/* Archived-semester read-only banner */}
+        {!isViewingActive && viewingSemester && (
+          <div className="flex items-center gap-2 px-9 py-2.5 text-[13px]" style={{ backgroundColor: '#f6efe0', borderBottom: '1px solid #e7dcc4', color: '#8f7039' }}>
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            <span>Viewing the archived <strong>{viewingSemester.name}</strong> semester — read-only. Switch to the active semester to make changes.</span>
+          </div>
+        )}
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-9" style={{ backgroundColor: '#f3efe6' }}>

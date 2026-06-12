@@ -490,12 +490,140 @@ create policy receipts_delete on storage.objects for delete to authenticated
 
 
 -- ============================================================
+-- SEMESTERS — rollover / treasurer handoff
+-- ============================================================
+-- Each chapter has many semesters; exactly one is `status='active'`. Budget
+-- accounts, expenses, and dues collections are tagged with a semester_id
+-- (auto-filled by trigger from the chapter's active semester). Rolling over
+-- archives the active semester (read-only) and starts a fresh active one.
+-- Members are chapter-scoped and carry over; their dues_status resets.
+
+create table if not exists semesters (
+  id          uuid primary key default gen_random_uuid(),
+  chapter_id  uuid not null references chapters(id) on delete cascade,
+  name        text not null,                       -- e.g. 'Fall 2026'
+  status      text not null default 'active' check (status in ('active', 'archived')),
+  created_at  timestamptz not null default now(),
+  archived_at timestamptz
+);
+create index if not exists idx_semesters_chapter on semesters (chapter_id);
+-- At most one active semester per chapter.
+create unique index if not exists idx_semesters_one_active
+  on semesters (chapter_id) where status = 'active';
+
+-- Tag the semester-scoped tables (nullable; trigger fills it in).
+alter table budget_accounts  add column if not exists semester_id uuid references semesters(id) on delete cascade;
+alter table expenses         add column if not exists semester_id uuid references semesters(id) on delete cascade;
+alter table dues_collections add column if not exists semester_id uuid references semesters(id) on delete cascade;
+create index if not exists idx_budget_accounts_semester  on budget_accounts  (semester_id);
+create index if not exists idx_expenses_semester         on expenses         (semester_id);
+create index if not exists idx_dues_collections_semester on dues_collections (semester_id);
+
+-- SECURITY DEFINER helper: the active semester id for a chapter.
+create or replace function public.active_semester_id(cid uuid)
+returns uuid language sql security definer stable set search_path = public as $$
+  select id from public.semesters where chapter_id = cid and status = 'active' limit 1;
+$$;
+
+-- AFTER INSERT on chapters: every new chapter gets one active semester
+-- automatically (named after chapters.semester). This is what makes new
+-- signups work — without it, a chapter has no active semester, inserts get a
+-- null semester_id, and rollover has nothing to archive.
+create or replace function public.create_initial_semester()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.semesters (chapter_id, name, status)
+  values (new.id, coalesce(new.semester, 'Current'), 'active')
+  on conflict do nothing;
+  return new;
+end;
+$$;
+drop trigger if exists trg_chapter_initial_semester on chapters;
+create trigger trg_chapter_initial_semester
+  after insert on chapters for each row execute function public.create_initial_semester();
+
+-- BEFORE INSERT trigger: if a row arrives without semester_id, stamp it with
+-- the chapter's active semester. This is what lets the existing app inserts
+-- (which know nothing about semesters) "just work".
+create or replace function public.set_active_semester()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.semester_id is null then
+    new.semester_id := public.active_semester_id(new.chapter_id);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_set_semester_budget on budget_accounts;
+drop trigger if exists trg_set_semester_expense on expenses;
+drop trigger if exists trg_set_semester_dues on dues_collections;
+create trigger trg_set_semester_budget  before insert on budget_accounts  for each row execute function public.set_active_semester();
+create trigger trg_set_semester_expense before insert on expenses         for each row execute function public.set_active_semester();
+create trigger trg_set_semester_dues    before insert on dues_collections for each row execute function public.set_active_semester();
+
+-- Backfill: every existing chapter needs one active semester, and existing
+-- rows need to point at it. Idempotent — only acts where data is missing.
+insert into semesters (chapter_id, name, status)
+select c.id, coalesce(c.semester, 'Current'), 'active'
+from chapters c
+where not exists (select 1 from semesters s where s.chapter_id = c.id);
+
+update budget_accounts b set semester_id = public.active_semester_id(b.chapter_id)  where b.semester_id is null;
+update expenses e        set semester_id = public.active_semester_id(e.chapter_id)  where e.semester_id is null;
+update dues_collections d set semester_id = public.active_semester_id(d.chapter_id) where d.semester_id is null;
+
+-- RLS for semesters: members view; admins manage.
+alter table semesters enable row level security;
+drop policy if exists semesters_select on semesters;
+drop policy if exists semesters_write  on semesters;
+create policy semesters_select on semesters for select
+  using (public.user_belongs_to_chapter(chapter_id));
+create policy semesters_write on semesters for all
+  using (public.user_is_chapter_admin(chapter_id))
+  with check (public.user_is_chapter_admin(chapter_id));
+
+-- roll_over_semester(cid, new_name) — admin only. Archives the active
+-- semester, opens a fresh one, resets members' dues status to Pending.
+-- Members and budget structure are NOT copied (new semester starts empty);
+-- archived data stays readable via the semester switcher.
+create or replace function public.roll_over_semester(cid uuid, new_name text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare new_id uuid;
+begin
+  if not public.user_is_chapter_admin(cid) then
+    raise exception 'Not authorized to roll over this chapter';
+  end if;
+  if coalesce(trim(new_name), '') = '' then
+    raise exception 'New semester name is required';
+  end if;
+
+  update semesters set status = 'archived', archived_at = now()
+    where chapter_id = cid and status = 'active';
+
+  insert into semesters (chapter_id, name, status)
+    values (cid, trim(new_name), 'active')
+    returning id into new_id;
+
+  -- Keep chapters.semester in sync with the active semester label.
+  update chapters set semester = trim(new_name) where id = cid;
+  -- Fresh slate: everyone owes dues again next term.
+  update members set dues_status = 'Pending' where chapter_id = cid;
+
+  return new_id;
+end;
+$$;
+
+
+-- ============================================================
 -- GRANTS (RLS still gates every row; these just expose the API)
 -- ============================================================
 grant usage on schema public to anon, authenticated;
 grant all on all tables in schema public to anon, authenticated;
 grant all on all sequences in schema public to anon, authenticated;
 
+grant execute on function public.active_semester_id(uuid)        to anon, authenticated;
+grant execute on function public.roll_over_semester(uuid, text)  to authenticated;
 grant execute on function public.user_belongs_to_chapter(uuid) to anon, authenticated;
 grant execute on function public.user_is_chapter_admin(uuid)   to anon, authenticated;
 grant execute on function public.user_can_submit_expenses(uuid) to anon, authenticated;
