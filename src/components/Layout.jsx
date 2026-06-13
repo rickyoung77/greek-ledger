@@ -50,6 +50,16 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/messages',
+    label: 'Text Blasts',
+    adminOnly: true,
+    icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 01-9 9c-1.6 0-3.1-.42-4.4-1.15L3 21l1.2-4.5A8.96 8.96 0 013 12a9 9 0 1118 0z" />
+      </svg>
+    ),
+  },
+  {
     to: '/notifications',
     label: 'Notifications',
     icon: (
@@ -76,6 +86,7 @@ const PAGE_TITLES = {
   '/expenses':         'Expenses',
   '/members':          'Members',
   '/dues':             'Dues Management',
+  '/messages':         'Text Blasts',
   '/notifications':    'Notifications',
   '/settings':         'Settings',
 }
@@ -87,7 +98,7 @@ function avatarInitials(name) {
 
 export default function Layout({ children }) {
   const location = useLocation()
-  const { fullName, chapterName, userRole, semester, signOut } = useAuth()
+  const { fullName, chapterName, userRole, semester, isAdmin, signOut } = useAuth()
   const { semesters, viewingSemesterId, setViewingId, isViewingActive, viewingSemester } = useSemester()
 
   const pageTitle = PAGE_TITLES[location.pathname] || 'Greek Ledger'
@@ -115,7 +126,7 @@ export default function Layout({ children }) {
 
         {/* Nav */}
         <nav className="relative z-10 flex-1 px-3.5 py-5 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map(({ to, label, icon }) => (
+          {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ to, label, icon }) => (
             <NavLink
               key={to}
               to={to}

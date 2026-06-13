@@ -16,7 +16,7 @@ function initials(name) {
   return (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')
 }
 
-const BLANK = { full_name: '', email: '', role: 'Member', year: 'Junior' }
+const BLANK = { full_name: '', email: '', phone: '', role: 'Member', year: 'Junior' }
 
 function Modal({ title, onClose, onSave, saving, error, disabled, children }) {
   return (
@@ -118,6 +118,7 @@ export default function Members() {
         chapter_id:  chapterId,
         full_name:   form.full_name.trim(),
         email:       form.email.trim() || null,
+        phone:       form.phone.trim() || null,
         role:        form.role,
         year:        form.year,
         dues_status: 'Pending',
@@ -317,15 +318,27 @@ export default function Members() {
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              placeholder="jane@example.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                placeholder="jane@example.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

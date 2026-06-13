@@ -12,6 +12,7 @@ import Members from './pages/Members'
 import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
 import Dues from './pages/Dues'
+import Messages from './pages/Messages'
 import CompleteSetup from './pages/CompleteSetup'
 
 function AppRoutes() {
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route path="/members"         element={<Members />} />
         <Route path="/notifications"   element={<Notifications />} />
         <Route path="/dues"             element={<Dues />} />
+        <Route path="/messages"         element={<Messages />} />
         <Route path="/settings"        element={<Settings />} />
         <Route path="/login"           element={<Navigate to="/" replace />} />
         <Route path="/signup"          element={<Navigate to="/" replace />} />

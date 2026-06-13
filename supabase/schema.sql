@@ -47,6 +47,7 @@ create table if not exists members (
   year        text,
   dues_status text not null default 'Pending' check (dues_status in ('Paid', 'Pending')),
   email       text,
+  phone       text,   -- E.164-ish; used for SMS dues blasts (optional)
   -- When true, a non-admin member may submit expenses (always forced to
   -- Pending). Admins (creator / Treasurer / President) can submit regardless.
   can_submit_expenses boolean not null default false,
@@ -54,8 +55,9 @@ create table if not exists members (
   unique (user_id)   -- one membership per signed-up user (multiple NULLs allowed)
 );
 
--- Idempotent add for databases created before this column existed.
+-- Idempotent adds for databases created before these columns existed.
 alter table members add column if not exists can_submit_expenses boolean not null default false;
+alter table members add column if not exists phone text;
 
 -- ── budget_accounts ─────────────────────────────────────────
 -- parent_id null => top-level account; set => sub-account.
