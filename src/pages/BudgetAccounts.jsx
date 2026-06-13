@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useSemester } from '../context/SemesterContext'
+import MoneyInput from '../components/MoneyInput'
+import { parseMoney, isValidMoney } from '../lib/money'
 import Spinner from '../components/Spinner'
 
 const COLOR_OPTIONS = [
@@ -157,14 +159,14 @@ export default function BudgetAccounts() {
 
   async function createAccount() {
     if (!createForm.name.trim()) { setCreateError('Account name is required.'); return }
-    if (!createForm.total_budget || isNaN(Number(createForm.total_budget))) { setCreateError('Enter a valid budget amount.'); return }
+    if (!isValidMoney(createForm.total_budget)) { setCreateError('Enter a valid budget amount.'); return }
     setCreateSaving(true)
     setCreateError(null)
     try {
       const { error: err } = await supabase.from('budget_accounts').insert({
         chapter_id:   chapterId,
         name:         createForm.name.trim(),
-        total_budget: parseFloat(createForm.total_budget),
+        total_budget: parseMoney(createForm.total_budget),
         color:        createForm.color,
         parent_id:    null,
       })
@@ -187,14 +189,14 @@ export default function BudgetAccounts() {
 
   async function addSubAccount() {
     if (!subForm.name.trim()) { setSubError('Sub-account name is required.'); return }
-    if (!subForm.total_budget || isNaN(Number(subForm.total_budget))) { setSubError('Enter a valid budget amount.'); return }
+    if (!isValidMoney(subForm.total_budget)) { setSubError('Enter a valid budget amount.'); return }
     setSubSaving(true)
     setSubError(null)
     try {
       const { error: err } = await supabase.from('budget_accounts').insert({
         chapter_id:   chapterId,
         name:         subForm.name.trim(),
-        total_budget: parseFloat(subForm.total_budget),
+        total_budget: parseMoney(subForm.total_budget),
         color:        subParent.color,
         parent_id:    subParent.id,
       })
@@ -217,13 +219,13 @@ export default function BudgetAccounts() {
 
   async function saveEdit() {
     if (!editForm.name.trim()) { setEditError('Name is required.'); return }
-    if (!editForm.total_budget || isNaN(Number(editForm.total_budget))) { setEditError('Enter a valid budget amount.'); return }
+    if (!isValidMoney(editForm.total_budget)) { setEditError('Enter a valid budget amount.'); return }
     setEditSaving(true)
     setEditError(null)
     try {
       const { error: err } = await supabase.from('budget_accounts').update({
         name:         editForm.name.trim(),
-        total_budget: parseFloat(editForm.total_budget),
+        total_budget: parseMoney(editForm.total_budget),
       }).eq('id', editTarget.id)
       if (err) throw err
       setShowEdit(false)
@@ -376,14 +378,14 @@ export default function BudgetAccounts() {
       )}
 
       {showCreate && (
-        <ModalShell title="Create Budget Account" onClose={() => setShowCreate(false)} onSave={createAccount} saving={createSaving} error={createError} disabled={!createForm.name.trim() || !createForm.total_budget}>
+        <ModalShell title="Create Budget Account" onClose={() => setShowCreate(false)} onSave={createAccount} saving={createSaving} error={createError} disabled={!createForm.name.trim() || !isValidMoney(createForm.total_budget)}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Account Name <span className="text-red-400">*</span></label>
             <input type="text" placeholder="e.g. Social Events" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Total Budget <span className="text-red-400">*</span></label>
-            <input type="number" placeholder="5000" min="0" step="0.01" value={createForm.total_budget} onChange={(e) => setCreateForm({ ...createForm, total_budget: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <MoneyInput placeholder="5,000" value={createForm.total_budget} onChange={(v) => setCreateForm({ ...createForm, total_budget: v })} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
@@ -397,27 +399,27 @@ export default function BudgetAccounts() {
       )}
 
       {showSub && subParent && (
-        <ModalShell title={`Add Sub-Account to ${subParent.name}`} onClose={() => setShowSub(false)} onSave={addSubAccount} saving={subSaving} error={subError} disabled={!subForm.name.trim() || !subForm.total_budget}>
+        <ModalShell title={`Add Sub-Account to ${subParent.name}`} onClose={() => setShowSub(false)} onSave={addSubAccount} saving={subSaving} error={subError} disabled={!subForm.name.trim() || !isValidMoney(subForm.total_budget)}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sub-Account Name <span className="text-red-400">*</span></label>
             <input type="text" placeholder="e.g. Mixers" value={subForm.name} onChange={(e) => setSubForm({ ...subForm, name: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Budget <span className="text-red-400">*</span></label>
-            <input type="number" placeholder="1000" min="0" step="0.01" value={subForm.total_budget} onChange={(e) => setSubForm({ ...subForm, total_budget: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <MoneyInput placeholder="1,000" value={subForm.total_budget} onChange={(v) => setSubForm({ ...subForm, total_budget: v })} />
           </div>
         </ModalShell>
       )}
 
       {showEdit && editTarget && (
-        <ModalShell title="Edit Sub-Account" onClose={() => setShowEdit(false)} onSave={saveEdit} saving={editSaving} error={editError} disabled={!editForm.name.trim() || !editForm.total_budget}>
+        <ModalShell title="Edit Sub-Account" onClose={() => setShowEdit(false)} onSave={saveEdit} saving={editSaving} error={editError} disabled={!editForm.name.trim() || !isValidMoney(editForm.total_budget)}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sub-Account Name <span className="text-red-400">*</span></label>
             <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Budget <span className="text-red-400">*</span></label>
-            <input type="number" min="0" step="0.01" value={editForm.total_budget} onChange={(e) => setEditForm({ ...editForm, total_budget: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <MoneyInput value={editForm.total_budget} onChange={(v) => setEditForm({ ...editForm, total_budget: v })} />
           </div>
         </ModalShell>
       )}

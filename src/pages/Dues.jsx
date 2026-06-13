@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useSemester } from '../context/SemesterContext'
+import { parseMoney } from '../lib/money'
 import Spinner from '../components/Spinner'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -29,10 +30,10 @@ function statusBadge(s) {
   return { bg: '#fee2e2', text: '#b91c1c', label: 'Pending' }
 }
 function getAmountForMember(member, form) {
-  if (form.mode === 'manual') return parseFloat(form.memberAmounts[member.id] || 0)
-  if (OFFICER_ROLES.has(member.role) && parseFloat(form.yearAmounts['Officer'] || 0) > 0)
-    return parseFloat(form.yearAmounts['Officer'])
-  return parseFloat(form.yearAmounts[member.year] || 0)
+  if (form.mode === 'manual') return parseMoney(form.memberAmounts[member.id] || 0)
+  if (OFFICER_ROLES.has(member.role) && parseMoney(form.yearAmounts['Officer'] || 0) > 0)
+    return parseMoney(form.yearAmounts['Officer'])
+  return parseMoney(form.yearAmounts[member.year] || 0)
 }
 function statsFor(colId, allDues) {
   const dues      = allDues.filter(d => d.dues_collection_id === colId)
@@ -177,8 +178,8 @@ export default function Dues() {
 
       if (form.mode === 'year') {
         const tiers = YEAR_TIERS
-          .filter(t => parseFloat(form.yearAmounts[t] || 0) > 0)
-          .map(t => ({ dues_collection_id: col.id, classification: t, amount: parseFloat(form.yearAmounts[t]) }))
+          .filter(t => parseMoney(form.yearAmounts[t] || 0) > 0)
+          .map(t => ({ dues_collection_id: col.id, classification: t, amount: parseMoney(form.yearAmounts[t]) }))
         if (tiers.length > 0) { const { error: e2 } = await supabase.from('dues_tiers').insert(tiers); if (e2) throw e2 }
       }
 
@@ -246,8 +247,8 @@ export default function Dues() {
   const activeCount  = collections.filter(c => c.status === 'active').length
   const canPreview   = form.name.trim() && (
     form.mode === 'year'
-      ? YEAR_TIERS.some(t => parseFloat(form.yearAmounts[t] || 0) > 0)
-      : Object.values(form.memberAmounts).some(v => parseFloat(v || 0) > 0)
+      ? YEAR_TIERS.some(t => parseMoney(form.yearAmounts[t] || 0) > 0)
+      : Object.values(form.memberAmounts).some(v => parseMoney(v || 0) > 0)
   )
   const unpaidCount = filteredDues.filter(d => d.status !== 'paid').length
 
@@ -476,9 +477,9 @@ export default function Dues() {
                             <span className="text-sm font-medium text-gray-700 w-20 flex-shrink-0">{tier}</span>
                             <div className="relative flex-1">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
-                              <input type="number" min="0" step="0.01" placeholder="0"
+                              <input type="text" inputMode="decimal" placeholder="0"
                                 value={form.yearAmounts[tier]}
-                                onChange={e => setForm(p => ({ ...p, yearAmounts: { ...p.yearAmounts, [tier]: e.target.value } }))}
+                                onChange={e => setForm(p => ({ ...p, yearAmounts: { ...p.yearAmounts, [tier]: e.target.value.replace(/[^0-9.,$\s]/g, '') } }))}
                                 className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none transition" {...fs} />
                             </div>
                           </div>
@@ -511,9 +512,9 @@ export default function Dues() {
                                 <td className="px-4 py-2">
                                   <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
-                                    <input type="number" min="0" step="0.01" placeholder="0"
+                                    <input type="text" inputMode="decimal" placeholder="0"
                                       value={form.memberAmounts[m.id] ?? ''}
-                                      onChange={e => setForm(p => ({ ...p, memberAmounts: { ...p.memberAmounts, [m.id]: e.target.value } }))}
+                                      onChange={e => setForm(p => ({ ...p, memberAmounts: { ...p.memberAmounts, [m.id]: e.target.value.replace(/[^0-9.,$\s]/g, '') } }))}
                                       className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-1.5 text-sm focus:outline-none text-right transition" {...fs} />
                                   </div>
                                 </td>

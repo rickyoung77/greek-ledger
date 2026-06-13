@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Spinner from '../components/Spinner'
 import InvoiceUpload from '../components/InvoiceUpload'
+import MoneyInput from '../components/MoneyInput'
+import { parseMoney, isValidMoney } from '../lib/money'
 import { useSemester } from '../context/SemesterContext'
 
 const statusStyles = {
@@ -124,7 +126,7 @@ export default function Expenses() {
   }
 
   async function handleSubmit() {
-    if (!form.amount || !form.description.trim()) {
+    if (!isValidMoney(form.amount) || !form.description.trim()) {
       setModalError('Amount and description are required.')
       return
     }
@@ -135,7 +137,7 @@ export default function Expenses() {
       const { data, error: err } = await supabase.from('expenses').insert({
         chapter_id:        chapterId,
         description:       form.description.trim(),
-        amount:            parseFloat(form.amount) || 0,
+        amount:            parseMoney(form.amount) || 0,
         category:          selectedAccount ? selectedAccount.name : (form.category || 'Uncategorized'),
         budget_account_id: selectedAccount ? selectedAccount.id : null,
         submitted_by:      form.submitted_by.trim() || fullName || 'Unknown',
@@ -364,13 +366,9 @@ export default function Expenses() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Amount <span className="text-red-400">*</span></label>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
+                  <MoneyInput
                     value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    onChange={(v) => setForm({ ...form, amount: v })}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -422,7 +420,7 @@ export default function Expenses() {
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition">Cancel</button>
               <button
                 onClick={handleSubmit}
-                disabled={modalSaving || !form.amount || !form.description.trim()}
+                disabled={modalSaving || !isValidMoney(form.amount) || !form.description.trim()}
                 className="px-5 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
                 style={{ backgroundColor: '#1b2640', color: '#fff' }}
               >

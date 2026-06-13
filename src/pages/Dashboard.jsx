@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useSemester } from '../context/SemesterContext'
+import MoneyInput from '../components/MoneyInput'
+import { parseMoney, isValidMoney } from '../lib/money'
 import Spinner from '../components/Spinner'
 
 const CARD_META = [
@@ -149,7 +151,7 @@ export default function Dashboard() {
     const { error } = await supabase.from('expenses').insert({
       chapter_id:   chapterId,
       description:  form.description,
-      amount:       parseFloat(form.amount) || 0,
+      amount:       parseMoney(form.amount) || 0,
       category:     form.category,
       submitted_by: fullName || 'Unknown',
       status:       'Pending',
@@ -163,7 +165,7 @@ export default function Dashboard() {
   }
 
   async function handleIncomeSubmit() {
-    if (!incForm.amount || !incForm.description.trim()) {
+    if (!isValidMoney(incForm.amount) || !incForm.description.trim()) {
       setIncError('Amount and description are required.')
       return
     }
@@ -171,7 +173,7 @@ export default function Dashboard() {
     const { error } = await supabase.from('income').insert({
       chapter_id:  chapterId,
       description: incForm.description.trim(),
-      amount:      parseFloat(incForm.amount) || 0,
+      amount:      parseMoney(incForm.amount) || 0,
       category:    incForm.category,
       recorded_by: fullName || 'Unknown',
       date:        incForm.date || new Date().toISOString().slice(0, 10),
@@ -359,7 +361,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Amount <span className="text-red-400">*</span></label>
-                  <input type="number" placeholder="0.00" min="0" step="0.01" value={incForm.amount} onChange={(e) => setIncForm({ ...incForm, amount: e.target.value })} className="gl-input" />
+                  <MoneyInput value={incForm.amount} onChange={(v) => setIncForm({ ...incForm, amount: v })} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
@@ -379,7 +381,7 @@ export default function Dashboard() {
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={() => setShowIncome(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition">Cancel</button>
-              <button onClick={handleIncomeSubmit} disabled={incSaving || !incForm.amount || !incForm.description.trim()} className="gl-btn-brass px-5 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-2">
+              <button onClick={handleIncomeSubmit} disabled={incSaving || !isValidMoney(incForm.amount) || !incForm.description.trim()} className="gl-btn-brass px-5 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-2">
                 {incSaving && (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
                 )}
@@ -403,7 +405,7 @@ export default function Dashboard() {
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                <input type="number" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <MoneyInput value={form.amount} onChange={(v) => setForm({ ...form, amount: v })} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
