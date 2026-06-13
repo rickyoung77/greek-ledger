@@ -60,6 +60,16 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/reports',
+    label: 'Reports',
+    adminOnly: true,
+    icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M9 17v-6h2v6m4 0V7h2v10M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
     to: '/notifications',
     label: 'Notifications',
     icon: (
@@ -87,6 +97,7 @@ const PAGE_TITLES = {
   '/members':          'Members',
   '/dues':             'Dues Management',
   '/messages':         'Text Blasts',
+  '/reports':          'Reports',
   '/notifications':    'Notifications',
   '/settings':         'Settings',
 }

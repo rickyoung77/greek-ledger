@@ -176,3 +176,21 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .gl-sheen, .gl-mote, .gl-rise { animation: none !important; }
 }
+
+/* ── Print: clean report export (Print / Save PDF) ──────────── */
+@media print {
+  /* Hide app chrome — only the report shows. The sidebar/header live
+     outside <main>; hide everything, then reveal the report subtree. */
+  body * { visibility: hidden !important; }
+  .gl-report, .gl-report * { visibility: visible !important; }
+  .gl-report {
+    position: absolute; left: 0; top: 0; width: 100%;
+    box-shadow: none !important; border-radius: 0 !important; padding: 0 !important;
+  }
+  .gl-no-print { display: none !important; }
+  /* let content flow across pages, drop dark backgrounds */
+  main { overflow: visible !important; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  @page { margin: 1.5cm; }
+}

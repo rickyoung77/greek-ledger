@@ -262,10 +262,10 @@ export default function Dashboard() {
             )}
             {isAdmin && (
               <>
-                <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
+                <button onClick={() => navigate('/messages')} className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
                   Send Dues Reminder
                 </button>
-                <button className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
+                <button onClick={() => navigate('/reports')} className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
                   Generate Report
                 </button>
               </>
