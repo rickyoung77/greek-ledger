@@ -165,6 +165,39 @@ body {
 .gl-btn-navy:hover { filter: brightness(1.12); }
 .gl-btn-navy:active { transform: translateY(1px); }
 
+/* quiet secondary button — hairline, ink text, cream hover. The default
+   action style everywhere except the single primary action on a screen. */
+.gl-btn-ghost {
+  background: #fff;
+  color: var(--gl-navy);
+  border: 1px solid #e3dccd;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.gl-btn-ghost:hover { background: var(--gl-cream-50); border-color: #d8cdb6; }
+
+/* ── Stat card (dashboard summary) ──────────────────────────── */
+/* Refined: hairline border, soft single shadow, NO colored bottom-border,
+   NO candy icon chip. Label is an engraved eyebrow; number carries the weight. */
+.gl-stat {
+  background: #fff;
+  border: 1px solid #ece4d4;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(27, 38, 64, 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.gl-stat:hover {
+  box-shadow: 0 10px 30px -18px rgba(27, 38, 64, 0.28);
+  transform: translateY(-1px);
+}
+
+/* refined card surface (replaces ad-hoc shadow-sm) */
+.gl-surface {
+  background: #fff;
+  border: 1px solid #ece4d4;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(27, 38, 64, 0.04);
+}
+
 /* ── Quiet entrance ─────────────────────────────────────────── */
 @keyframes gl-rise {
   from { opacity: 0; transform: translateY(14px); }

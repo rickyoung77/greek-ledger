@@ -11,32 +11,32 @@ const CARD_META = [
   {
     label: 'Total Income', key: 'totalIncome', fmt: 'money',
     color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0',
-    icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>,
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>,
   },
   {
     label: 'Total Spent', key: 'totalSpent', fmt: 'money',
     color: '#ef4444', bg: '#fef2f2', border: '#fecaca',
-    icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>,
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>,
   },
   {
     label: 'Net Cash Flow', key: 'netCashFlow', fmt: 'money',
     color: '#1b2640', bg: '#eef1f6', border: '#cbd3e0',
-    icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
   },
   {
     label: 'Total Budget', key: 'totalBudget', fmt: 'money',
     color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe',
-    icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
   },
   {
     label: 'Remaining Balance', key: 'remaining', fmt: 'money',
     color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe',
-    icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
   },
   {
     label: 'Active Members', key: 'memberCount', fmt: 'number',
     color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd',
-    icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
   },
 ]
 
@@ -196,47 +196,50 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-3 gap-6">
         {CARD_META.map((card) => {
-          // Net Cash Flow turns red when negative (spending exceeds income).
-          const negative = card.key === 'netCashFlow' && stats.netCashFlow < 0
-          const valueColor = negative ? '#b91c1c' : '#111827'
+          // Restraint: numbers are ink by default. Only the three cash-flow
+          // figures carry a quiet meaning color (muted green/red), never candy.
+          const isIncome = card.key === 'totalIncome'
+          const isSpent  = card.key === 'totalSpent'
+          const isNet    = card.key === 'netCashFlow'
+          let valueColor = '#1b2640'
+          if (isIncome && stats.totalIncome > 0) valueColor = '#3f6b52'      // muted forest
+          if (isSpent && stats.totalSpent > 0)   valueColor = '#9b3d3d'      // muted brick
+          if (isNet)  valueColor = stats.netCashFlow < 0 ? '#9b3d3d' : '#1b2640'
           return (
-            <div key={card.label} className="bg-white rounded-xl shadow-sm p-6 flex flex-col justify-between" style={{ borderBottom: `3px solid ${card.border}` }}>
+            <div key={card.label} className="gl-stat p-6">
               <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">{card.label}</p>
-                  <p className="gl-serif text-4xl font-semibold mt-1" style={{ color: valueColor }}>{displayValue(card)}</p>
-                </div>
-                <div className="p-2.5 rounded-xl flex-shrink-0" style={{ backgroundColor: card.bg, color: card.color }}>
-                  {card.icon}
-                </div>
+                <p className="gl-eyebrow" style={{ color: '#a99f8b' }}>{card.label}</p>
+                <span style={{ color: '#cdbf9f' }}>{card.icon}</span>
               </div>
+              <p className="gl-serif text-4xl font-semibold mt-3" style={{ color: valueColor }}>{displayValue(card)}</p>
             </div>
           )
         })}
       </div>
 
       {/* Budget Overview */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="gl-serif text-lg font-semibold text-gray-900 mb-5">Budget Overview</h2>
+      <div className="gl-surface p-7">
+        <h2 className="gl-serif text-xl font-semibold mb-5" style={{ color: '#1b2640' }}>Budget Overview</h2>
         {overview.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">No budget accounts yet. Create one in Budget Accounts.</p>
+          <p className="text-sm text-center py-6" style={{ color: '#a99f8b' }}>No budget accounts yet. Create one in Budget Accounts.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {overview.map((cat) => {
               const pct = cat.total > 0 ? Math.min(Math.round((cat.spent / cat.total) * 100), 100) : 0
+              const over = pct >= 90
               return (
                 <div key={cat.id}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-medium text-gray-700">{cat.name}</span>
-                    <span className="text-sm text-gray-500">
-                      {fmt(cat.spent)} <span className="text-gray-400">/ {fmt(cat.total)}</span>
-                      <span className="ml-2 font-semibold" style={{ color: cat.color }}>{pct}%</span>
+                  <div className="flex items-baseline justify-between mb-2">
+                    <span className="text-sm font-medium" style={{ color: '#1b2640' }}>{cat.name}</span>
+                    <span className="text-sm" style={{ color: '#8a8170' }}>
+                      {fmt(cat.spent)} <span style={{ color: '#cbbfa6' }}>/ {fmt(cat.total)}</span>
+                      <span className="ml-2 font-semibold" style={{ color: over ? '#9b3d3d' : '#b08d4f' }}>{pct}%</span>
                     </span>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-gray-100">
-                    <div className="h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: cat.color }} />
+                  <div className="w-full rounded-full" style={{ height: 6, backgroundColor: '#efe9dc' }}>
+                    <div className="rounded-full transition-all duration-500" style={{ height: 6, width: `${pct}%`, backgroundColor: over ? '#9b3d3d' : '#b08d4f' }} />
                   </div>
                 </div>
               )
@@ -252,21 +255,21 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             {canSubmitExpenses && isViewingActive && (
               <>
-                <button onClick={() => { setIncForm({ amount: '', category: 'Tailgate', description: '', date: '' }); setIncError(null); setShowIncome(true) }} className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#22c55e', color: '#15803d' }}>
-                  + Record Income
+                <button onClick={() => { setIncForm({ amount: '', category: 'Tailgate', description: '', date: '' }); setIncError(null); setShowIncome(true) }} className="gl-btn-ghost px-3.5 py-2 rounded-lg text-sm font-semibold">
+                  Record Income
                 </button>
-                <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{ backgroundColor: '#b08d4f', color: '#fff' }}>
-                  + Add Expense
+                <button onClick={() => setShowModal(true)} className="gl-btn-brass px-3.5 py-2 rounded-lg text-sm font-semibold">
+                  Add Expense
                 </button>
               </>
             )}
             {isAdmin && (
               <>
-                <button onClick={() => navigate('/messages')} className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
-                  Send Dues Reminder
+                <button onClick={() => navigate('/messages')} className="gl-btn-ghost px-3.5 py-2 rounded-lg text-sm font-semibold">
+                  Dues Reminder
                 </button>
-                <button onClick={() => navigate('/reports')} className="px-4 py-2 rounded-lg text-sm font-semibold border transition hover:bg-gray-50" style={{ borderColor: '#1b2640', color: '#1b2640' }}>
-                  Generate Report
+                <button onClick={() => navigate('/reports')} className="gl-btn-ghost px-3.5 py-2 rounded-lg text-sm font-semibold">
+                  Report
                 </button>
               </>
             )}

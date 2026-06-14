@@ -6,16 +6,30 @@ import MoneyInput from '../components/MoneyInput'
 import { parseMoney, isValidMoney } from '../lib/money'
 import Spinner from '../components/Spinner'
 
+// Muted "heritage" palette — country-club tones, not Tailwind candy. Each
+// has a soft tint background for the account icon/crest.
 const COLOR_OPTIONS = [
-  { hex: '#3b82f6', bg: '#eff6ff', label: 'Blue'   },
-  { hex: '#f97316', bg: '#fff7ed', label: 'Orange' },
-  { hex: '#22c55e', bg: '#f0fdf4', label: 'Green'  },
-  { hex: '#8b5cf6', bg: '#f5f3ff', label: 'Purple' },
-  { hex: '#ec4899', bg: '#fdf2f8', label: 'Pink'   },
-  { hex: '#14b8a6', bg: '#f0fdfa', label: 'Teal'   },
+  { hex: '#1b2640', bg: '#eef1f6', label: 'Navy'      },
+  { hex: '#b08d4f', bg: '#f6efe0', label: 'Brass'     },
+  { hex: '#3f6b52', bg: '#eef3ee', label: 'Forest'    },
+  { hex: '#7c4a3f', bg: '#f4ece9', label: 'Oxblood'   },
+  { hex: '#5b6b8c', bg: '#eef1f6', label: 'Slate'     },
+  { hex: '#8a6d3b', bg: '#f5efe2', label: 'Tan'       },
 ]
 
 const COLOR_BG = Object.fromEntries(COLOR_OPTIONS.map((c) => [c.hex, c.bg]))
+
+// Map any legacy Tailwind-candy colors saved before the heritage palette to
+// their nearest on-brand tone, so old accounts don't show bright blue/pink.
+const LEGACY_REMAP = {
+  '#3b82f6': '#1b2640', // blue   → navy
+  '#f97316': '#8a6d3b', // orange → tan
+  '#22c55e': '#3f6b52', // green  → forest
+  '#8b5cf6': '#5b6b8c', // purple → slate
+  '#ec4899': '#7c4a3f', // pink   → oxblood
+  '#14b8a6': '#3f6b52', // teal   → forest
+}
+const heritage = (hex) => LEGACY_REMAP[hex] || hex
 
 function ProgressBar({ pct, color }) {
   return (
@@ -74,7 +88,7 @@ export default function BudgetAccounts() {
   const [error, setError]       = useState(null)
 
   const [showCreate, setShowCreate]     = useState(false)
-  const [createForm, setCreateForm]     = useState({ name: '', total_budget: '', color: '#3b82f6' })
+  const [createForm, setCreateForm]     = useState({ name: '', total_budget: '', color: '#1b2640' })
   const [createSaving, setCreateSaving] = useState(false)
   const [createError, setCreateError]   = useState(null)
 
@@ -127,7 +141,8 @@ export default function BudgetAccounts() {
 
       const structured = topLevel.map((top) => ({
         ...top,
-        bg: COLOR_BG[top.color] ?? '#faf8f3',
+        color: heritage(top.color),
+        bg: COLOR_BG[heritage(top.color)] ?? '#faf8f3',
         subAccounts: subLevel
           .filter((s) => s.parent_id === top.id)
           .map((s) => ({ ...s, spent: spentMap[s.id] || 0 })),
@@ -152,7 +167,7 @@ export default function BudgetAccounts() {
   }, [chapterId, authLoading, load])
 
   function openCreate() {
-    setCreateForm({ name: '', total_budget: '', color: '#3b82f6' })
+    setCreateForm({ name: '', total_budget: '', color: '#1b2640' })
     setCreateError(null)
     setShowCreate(true)
   }
@@ -346,7 +361,7 @@ export default function BudgetAccounts() {
                               <div className="flex items-center gap-2 justify-end">
                                 {isAdmin && isViewingActive ? (
                                   <>
-                                    <button onClick={() => openEdit(sub)} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80" style={{ backgroundColor: '#eff6ff', color: '#3b82f6' }}>
+                                    <button onClick={() => openEdit(sub)} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80" style={{ backgroundColor: '#eff6ff', color: '#1b2640' }}>
                                       Edit
                                     </button>
                                     <button onClick={() => deleteSubAccount(sub.id)} disabled={deletingId === sub.id} className="px-2.5 py-1 rounded-md text-xs font-semibold transition hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
