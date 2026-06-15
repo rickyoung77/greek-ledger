@@ -26,6 +26,9 @@ body {
 
 .gl-serif { font-family: "Cormorant Garamond", Georgia, serif; }
 
+/* High-contrast display serif for the brand wordmark (logo only). */
+.gl-display { font-family: "Playfair Display", Georgia, serif; }
+
 /* tracking for small all-caps labels (the 'engraved' look) */
 .gl-eyebrow {
   font-size: 0.6875rem;

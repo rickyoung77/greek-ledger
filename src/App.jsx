@@ -33,13 +33,10 @@ function AppRoutes() {
       <div className="gl-navy-panel h-screen flex flex-col items-center justify-center gap-6 relative">
         <div className="gl-pinstripe absolute inset-0 pointer-events-none" />
         <div className="relative z-10 flex flex-col items-center gap-6">
-          <div
-            className="flex items-center justify-center rounded-lg gl-serif"
-            style={{ width: 52, height: 52, border: '1px solid rgba(196,163,104,0.55)', background: 'linear-gradient(180deg, rgba(176,141,79,0.18), rgba(176,141,79,0.04))', color: '#b08d4f', fontSize: 26, fontWeight: 600 }}
-          >
-            GL
+          <div className="flex items-center gap-3">
+            <span aria-hidden style={{ width: 9, height: 9, transform: 'rotate(45deg)', background: '#c4a368', boxShadow: '0 0 10px rgba(196,163,104,0.5)' }} />
+            <span className="gl-display" style={{ color: '#f3efe6', fontSize: '2rem', fontWeight: 600, letterSpacing: '0.005em' }}>Greek Ledger</span>
           </div>
-          <span className="gl-serif" style={{ color: '#f3efe6', fontSize: '1.5rem', fontWeight: 600 }}>Greek Ledger</span>
           <div
             className="w-6 h-6 rounded-full border-2 animate-spin"
             style={{ borderColor: 'rgba(196,163,104,0.2)', borderTopColor: '#b08d4f' }}
